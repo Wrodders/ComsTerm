@@ -1,0 +1,12 @@
+id,
+post-status,
+get-mode,
+get-slavesID,
+runToTarget,value,
+stoprun,
+set-mode,value
+blink,value
+abs,value
+revs,value
+job,value
+transfrom,matrix
