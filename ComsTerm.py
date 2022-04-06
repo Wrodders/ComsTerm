@@ -15,7 +15,9 @@ target_port = 'NONE'
 baudrate = 9600
 msgReceived  = ""
 validCommands = []
+cmdNames = []
 profiles = []
+validAddress = []
 receivingData = False # 
 ser = None
 global count
@@ -40,36 +42,98 @@ def UsersRead():
 def ValidCommandsRead():
     with open( 'Commands.csv','r') as CommandFile:
         reader = csv.reader(CommandFile)
-        global validCommands
+        global validCommands 
+        global cmdNames
         for row in reader:
             validCommands.append(row)
+        cmdNames = [i[0] for i in validCommands]
+        
+def LookUpAddress():
+    with open( 'addressBook.csv','r') as AddressFile:
+        reader = csv.reader(AddressFile)
+        global validAddress
+        validAddress = [i for line in reader for i in line]
 
-def Check_valid_Command(msg,app,output):
-    msgArgs = [i for i in msg.split(',')]
-    msgName = msgArgs.pop(0)
-    commandNames = [validCommands[i][0] for i in range(len(validCommands))]
-    target_index = [i for i,x in enumerate(commandNames) if x == msgName]
-    if len(target_index) == 0:
-        print("Invalid command")
-        error_msg = "<<!! Invalid command, input: 'help' for a list of commands"
-        app.update_CommandOutput(error_msg,output)
-        return False
-    validFormat = [i for i in validCommands[target_index[0]] if i != '']
-    if (1+len(msgArgs)) == len(validFormat):
-        return True
+
+def Check_valid_Message(msg,app,output):
+    # assumes msg != ''
+    global cmdNames
+    msgArgs =  msg.split(',') # split msg string into array 
+    msglen = len(msgArgs) # gets number of arguments in message 
+    if (msgArgs[0]  in validAddress):
+        #check if msg has a valid msgAddress part
+        if (msglen >= 2 and msgArgs[1] != ''):# checks if msg has inputted a value for command
+            # find index of inputted command in valid commands
+            target_index = [i for i,x in enumerate(cmdNames) if x == msgArgs[1]]
+            if len(target_index) == 0:
+                # inputted command not found
+                print("Invalid command")
+                error_msg = "<<!! Invalid command, input: 'help' for a list of commands"
+                app.update_CommandOutput(error_msg,output)
+                return False
+            # check if the rest of the message is in a valid format based on the command
+            validFormat = [i for i in validCommands[target_index[0]] if i != '']
+                # checks if command selected requires arguments
+            if (msglen == 1+len(validFormat) ):
+                    # checks if the inout has the right amount of delimeters
+                    # protects against execessive commas in msgContent part of message
+                    if ((len(validFormat) >=2)):
+                        # checks if inputted command requires any arguments
+                        if (bool(msgArgs[2])):
+                        # protects agains sending commands withought arguments
+                            pass
+                        else:
+                            print("Invalid command")
+                            error_msg = '<<!! '+ 'Invalid message format try: ' + ', '.join(validFormat)
+                            app.update_CommandOutput(error_msg,output)
+                            return False
+
+                        if '/' in validFormat[1]:
+                            #checks if command selected requires multiple arguments
+                            if '/' in msgArgs[2]:
+                                #checks if inputted msgContent contains a arguments delimeter
+                                return True
+                            else:
+                                print("Invalid command")
+                                error_msg = '<<!! '+ 'Invalid message format try: ' + ', '.join(validFormat)
+                                app.update_CommandOutput(error_msg,output)
+                                return False
+                        else:
+                            return True
+                    else:
+                        print("hello")
+                        return True
+            else:
+                print("Invalid command")
+                error_msg = '<<!! '+ 'Invalid message format try: ' + ', '.join(validFormat)
+                app.update_CommandOutput(error_msg,output)    
+                return False    
+            
+        else:
+            print("Invalid command")
+            error_msg = "<<!! Invalid command, input: 'help' for a list of commands"
+            app.update_CommandOutput(error_msg,output)
+            return False
     else:
-        error_msg = '<<!! '+ 'Invalid command format try: ' + ', '.join(validFormat)
+        print('No Address')
+        error_msg = "<<!! [Error] message must have a target address, input 'addressBook' or 'help'"
         app.update_CommandOutput(error_msg,output)
-        return False
+        return False   
 
 
 def help_Command(app):
     msg ="<< List of All Commands available, CommandName and syntax, check Documentation for more information"
     app.update_CommandOutput(msg,text_output)
-    for i in range(len(validCommands)):
-        msg = validCommands[i][0] + ':' + validCommands[i][1]
+    for i in range(0,len(validCommands)):
+        msg = validCommands[i][0]+":"+validCommands[i][1]
         app.update_CommandOutput(msg,text_output)
 
+def get_address(app):
+    msg = "<< List of all Valid Addresses, check Documentation for more information"
+    app.update_CommandOutput(msg,text_output)
+    for i in range(0,len(validAddress)):
+        msg = validAddress[i]
+        app.update_CommandOutput(msg,text_output)
 
 
 
@@ -153,11 +217,11 @@ def auto_find_Port(e_input):
         messagebox.showerror("Info", "No new Device Found")
 
 
-def send_Serial(app,cmdN,value):
+def send_Serial(app,addrN,cmdN,u_content):
     global connected, target_port
+    # create serial message <msgAddressID,function callID,function arguments>
+    s_msg = "<"+addrN +","+cmdN +","+u_content+">"
     # todo check if msg is valid command
-    #create serial message
-    s_msg = '<' + str(cmdN) + ',' + value + '>'
     #if ser.isOpen() == False:
         #ser.open()
     try:
@@ -302,9 +366,10 @@ class GUI(tk.Tk):
 
     def create_login(self):
         login_win = tk.Toplevel(self)
-        login_win.geometry("300x100")
+        login_win.geometry("300x110")
         login_win.title("Login")
         login_win.resizable(False,False)
+        login_win.protocol("WM_DELETE_WINDOW", lambda: self.handel_quit(self))
         b_login = ttk.Button(login_win, text = "Login",command = lambda: self.handle_login(e_uname.get(), e_pswd.get(), login_win, label))
         e_uname = ttk.Entry(login_win, width = 20)
         e_pswd = ttk.Entry(login_win, width = 20, show="*")
@@ -312,7 +377,7 @@ class GUI(tk.Tk):
         l_uname = ttk.Label(login_win, text = "Username: ")
         l_pswd = ttk.Label(login_win, text = "Password: ")
         label  = ttk.Label(login_win, text= "")
-        b_login.grid(column =0,row=3, columnspan =2, sticky = tk.NSEW, padx = (10,10))
+        b_login.grid(column =0,row=3, columnspan =2, sticky = tk.NSEW, padx = (10,10), pady = (0,10))
         l_uname.grid(column =0, row =0, sticky = tk.NSEW, padx = (10,10))
         l_pswd.grid(column =0, row =1, sticky = tk.NSEW, padx = (10,10))
         e_uname.grid(column =1, row=0, sticky = tk.NSEW)
@@ -326,23 +391,30 @@ class GUI(tk.Tk):
         if connected:
             if msg != "" :
                 if msg != "help": 
-                    if Check_valid_Command(msg,self,output):
-                        command_msg = ">> " + msg # >> Message Sent
-                        self.update_CommandOutput(command_msg, output)
-                        # map word command to command number
-                        if ',' in msg:
-                            cmd = ','.join(msg.split(",")[:-1])
-                            value = (msg.split(",")[-1])
-                        else:
-                            cmd = msg
-                            value = ''
-                        for i, x in enumerate(validCommands):
-                            if cmd in x:
-                                cmdN =  i
-                        send_Serial(self,cmdN,value)
+                    if msg != "addressbook":
+                        if Check_valid_Message(msg,self,output):
+                            # all messages should have at min address,command
+                            u_msg = ">> " + msg # >>User Message Sent
+                            self.update_CommandOutput(u_msg, output)
+
+                            # map word command to command number
+                            u_addr = msg.split(',')[0]
+                            u_cmd = u_msg.split(',')[1]
+                            if (msg.count(',') ==1):
+                                # msg contains command that does not require arguments
+                                u_content = '';
+                            else:
+                                u_content = msg.split(',')[2]
+                            
+                            cmdN = cmdNames.index(u_cmd)
+                            addrN = validAddress.index(u_addr)
+                            # call send serial msg command
+                            send_Serial(self,addrN,cmdN,u_content)
+                    else:
+                        get_address(self)
                 else:
                     help_Command(self)
-                    # clears commmand input fields
+                    # clears command input fields
         else:
             msg = ">>!! No Device Connected"
             self.update_CommandOutput(msg, output)
@@ -441,8 +513,10 @@ def Start_Application():
     # background checks for system settings
     # Starts Threads and Queues
     # reads in Valid Commands form file
+    # Reads in Valid Addresses
     ValidCommandsRead()
     UsersRead()
+    LookUpAddress()
     app = GUI()
     app.mainloop()
 
