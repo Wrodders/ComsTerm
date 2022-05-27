@@ -1,17 +1,26 @@
+from asyncio import base_tasks
 import tkinter as tk
 from tkinter import Tk, ttk
 from tkinter import messagebox, Menu, filedialog
 from datetime import datetime
 import webbrowser
-import time
-import asyncio
+import numpy as np
+from numpy import random
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Cursor,Button
+
+plt.ion()
 
 import serial
 import serial.tools.list_ports
 import csv
+import subprocess
+
+
 global connected
 connected = False
 target_port = 'NONE'
+target_address = 'NONE'
 baudrate = 9600
 msgReceived  = ""
 validCommands = []
@@ -23,15 +32,53 @@ ser = None
 global count
 count = 0
 User  = ""
+xy_point = [0,0]
 
 # Gui Class will Always Log to Output Console
 # Other functions will log to terminal 
 ## Valid Commands are in the format, CommandName,Value(if applicable)
 # serial messages will be sent with start,stop chars <message> and a delemiter ',' if applicable
 
-async def timecheck(t):
-    await asyncio.sleep(t)
 
+
+
+### Graphign Functions###
+
+def graph_ZX():
+    fig  =  Figure(figsize=(5,5), dpi=100)
+    x = np.arange(0,4*np.pi,0.1) #start stop step
+    y = np.sin(x)
+    plot1 = fig.add_subplot(111)
+    plot1.plot(x,y)
+    return fig
+
+
+def graph_XY():
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    def mouse_event(event):
+        print('x: {} and y: {}'.format(event.xdata, event.ydata))
+    fig = plt.figure()
+    cid = fig.canvas.mpl_connect('button_press_event', mouse_event)
+    
+    
+    x = np.linspace(-10, 10, 100)
+    y = np.exp(x)
+
+    plt.plot(x, y)
+
+    plt.show()  
+
+def onClick(event,fig):
+    xy_point[0]= event.x
+    xy_point[1]= event.y
+    fig.canvas.draw()
+
+    
+
+
+
+#### Message Parsing Functions ####
 
 def UsersRead():
     with open( 'Users.csv','r') as UsersFile:
@@ -57,9 +104,11 @@ def LookUpAddress():
 
 def Check_valid_Message(msg,app,output):
     # assumes msg != ''
-    global cmdNames
+    global cmdNames;target_address
     msgArgs =  msg.split(',') # split msg string into array 
     msglen = len(msgArgs) # gets number of arguments in message 
+
+    #TOD0 check for preseitn valid address 
     if (msgArgs[0]  in validAddress):
         #check if msg has a valid msgAddress part
         if (msglen >= 2 and msgArgs[1] != ''):# checks if msg has inputted a value for command
@@ -116,7 +165,7 @@ def Check_valid_Message(msg,app,output):
             return False
     else:
         print('No Address')
-        error_msg = "<<!! [Error] message must have a target address, input 'addressBook' or 'help'"
+        error_msg = "<<!! [Error] message must have a target address, input 'addressbook' or 'help'"
         app.update_CommandOutput(error_msg,output)
         return False   
 
@@ -314,23 +363,39 @@ class GUI(tk.Tk):
 
 
     def create_ConnectionsWindow(self,frame):
-        global User
-        l_user = ttk.Label(frame, text = User)
-        e_input = ttk.Entry(frame)
+        global User 
+        l_user = ttk.Label(frame, text = "Welcome: " + User, foreground='green')
+        e_input = ttk.Entry(frame, width=20)
         b_Connect = ttk.Button(frame,text="Connect", command = lambda: self.handel_Connect_Command(e_input.get()))
         b_Disconnect = ttk.Button(frame,text="Disconnect", command = lambda: self.handle_Disconnect_Command())
         b_auto = ttk.Button(frame,text="Auto Connect", command = lambda: auto_find_Port(e_input))
         l_Connection_Name = ttk.Label(frame, text="Connected to: ", foreground = 'yellow')
-        global l_ConnectionPort
         l_ConnectionPort = ttk.Label(frame,text=target_port, foreground = "yellow")
+        e_addr = ttk.Entry(frame)
+        b_addr = ttk.Button(frame,text="Set Msg Address", command = lambda: self.handel_preset_addr(e_addr.get()))
+        r1 = ttk.Radiobutton(frame,text="Serial", value = 1)
+        r2 = ttk.Radiobutton(frame,text="Ethernt", value = 2)
+        r3 = ttk.Radiobutton(frame,text="Wifi", value = 3)
 
-        l_user.grid(column=2, row = 1,)
-        e_input.grid(column=0, row= 0)
-        b_Connect.grid(column=1, row=0, sticky=tk.EW)
-        b_Disconnect.grid(column=1,row=1)
-        b_auto.grid(column =2, row = 0)
-        l_Connection_Name.grid(column =1, row = 2)
-        l_ConnectionPort.grid(column =2, row =2)
+
+        e_input.grid(column = 0, row = 0, sticky = tk.NSEW)
+        e_addr.grid(column = 0, row = 1, sticky = tk.NSEW)
+        b_auto.grid(column = 0, row = 2, sticky = tk.NSEW)
+
+        b_Connect.grid(column = 1, row = 0, sticky = tk.NSEW)
+        b_addr.grid(column = 1, row = 1, sticky = tk.NSEW)
+        l_Connection_Name.grid(column = 1, row = 2, sticky = tk.E)
+
+        b_Disconnect.grid(column = 2, row = 0, sticky = tk.NSEW)
+        l_ConnectionPort.grid(column = 2, row = 2, sticky = tk.W)
+
+        r1.grid(column = 3, row = 0, sticky = tk.W)
+        r2.grid(column = 3, row = 1, sticky = tk.W)
+        r3.grid(column = 3, row = 2, sticky = tk.W)
+
+        l_user.grid(column = 4, row = 0, sticky = tk.W)
+
+
     
     def create_presetCommands_Window(self):
         global count 
@@ -341,26 +406,62 @@ class GUI(tk.Tk):
             presetWindow.focus()
         else:
             presetWindow = tk.Toplevel(self)
-            presetWindow.geometry("380x200")
-            presetWindow.resizable(False, False)
-            presetWindow.title("Preset Commands")
-            b_jog90 = ttk.Button(presetWindow,text="Jog 90 degrees", command= lambda: self.handle_Send_Command("jog,90",text_output))
-            b_jog45 = ttk.Button(presetWindow,text="Jog 45 degrees", command= lambda: self.handle_Send_Command("jog,45",text_output))
-            b_jog180 = ttk.Button(presetWindow,text="Jog 180 degrees", command= lambda: self.handle_Send_Command("jog,180",text_output))
-            b_rev10 = ttk.Button(presetWindow,text="10 revs", command= lambda: self.handle_Send_Command("rev,10",text_output))
-            b_rev2 = ttk.Button(presetWindow,text="2 revs", command= lambda: self.handle_Send_Command("rev,2",text_output))
-            b_rev1 = ttk.Button(presetWindow,text="1 rev", command= lambda: self.handle_Send_Command("rev,1",text_output))
-            b_abs90 = ttk.Button(presetWindow,text="Abs 90 degrees", command= lambda: self.handle_Send_Command("abs,90",text_output))
-            b_abs10 = ttk.Button(presetWindow,text="Abs 10 degrees", command= lambda: self.handle_Send_Command("abs,10",text_output))
+            presetWindow.geometry("600x400")
+            #presetWindow.resizable(False, False)
+            presetWindow.title("Motion Controller")
+            # create Frames 
+            JointCtrlFrame = ttk.Frame(presetWindow, borderwidth = 0.1, relief = "sunken", padding = 3 )
+            PosCtrlFrame = ttk.Frame(presetWindow, borderwidth = 0.1, relief = "sunken", padding = 3 )
+            EndEffectorFrame = ttk.Frame(presetWindow, borderwidth = 0.1, relief = "sunken", padding = 3 )
+            PoseTrackFrame = ttk.Frame(presetWindow, borderwidth = 0.1, relief = "sunken", padding = 3 )
 
-            b_jog90.grid(column =0, row =0,sticky = tk.NSEW)
-            b_jog180.grid(column = 0, row =1, sticky= tk.NSEW)
-            b_jog45.grid(column = 0, row = 2, sticky = tk.NSEW)
-            b_rev10.grid(column = 1, row = 0, sticky = tk.NSEW)
-            b_rev2.grid(column = 1, row = 1, sticky = tk.NSEW)
-            b_rev1.grid(column = 1, row = 2, sticky = tk.NSEW)
-            b_abs90.grid(column = 2, row = 0, sticky = tk.E)
-            b_abs10.grid(column = 2, row = 1, sticky = tk.NSEW)
+            # confgure grid 
+            presetWindow.rowconfigure(0, weight = 1)
+            presetWindow.rowconfigure(1, weight = 3)
+            presetWindow.rowconfigure(2, weight = 4)
+            # position frames in window
+            JointCtrlFrame.grid(column = 0, row = 0, sticky = tk.NSEW)
+            PosCtrlFrame.grid(column = 1, row = 0, sticky = tk.NSEW)
+            EndEffectorFrame.grid(column = 0, row = 1, columnspan=2, sticky = tk.NSEW)
+            PoseTrackFrame.grid(column = 0, row = 2, columnspan=2, sticky = tk.NSEW)
+
+
+            # create widgets for Joint Control Frame
+            l_tJoint = ttk.Label(JointCtrlFrame, text = "Target Joint: ")
+            e_tJoint = ttk.Entry(JointCtrlFrame)
+            e_input = ttk.Entry(JointCtrlFrame, width = 10)
+            b_jog = ttk.Button(JointCtrlFrame, text = "Jog", command = lambda: self.handel_Jog_Command(e_input.get()))
+            b_runTo = ttk.Button(JointCtrlFrame, text = "Run To", command = lambda: self.handel_RunTo_Command(e_input.get()))
+            b_stop = tk.Button(JointCtrlFrame, text = "Stop",bg = 'red', command = lambda: self.handel_Stop_Command())
+            b_revolve = ttk.Button(JointCtrlFrame, text = "Revolve", command = lambda: self.handel_Revolve_Command(e_input.get()))
+
+            # position widgets in Joint Control Frame
+            l_tJoint.grid(column = 0, row = 0, sticky = tk.W)
+            e_tJoint.grid(column = 1, row = 0, columnspan= 2, sticky = tk.EW)
+            e_input.grid(column = 0, row = 1, sticky = tk.W)
+            b_jog.grid(column = 1, row = 1, sticky = tk.W)
+            b_runTo.grid(column = 2, row = 1, sticky = tk.W)
+            b_stop.grid(column = 0, row = 2, sticky = tk.W)
+            b_revolve.grid(column = 1, row = 2, sticky = tk.W)
+
+            # create widgets for Position Control Frame
+            l_title = ttk.Label(PosCtrlFrame, text = "Position Control")
+            b_sleep = ttk.Button(PosCtrlFrame, text = "Sleep", command = lambda: self.handel_PosControll(0))
+            b_unsleep = ttk.Button(PosCtrlFrame, text = "Unsleep", command = lambda: self.handel_PosControll(1))
+            b_extend = ttk.Button(PosCtrlFrame, text = "Extend", command = lambda: self.handel_PosControll(2))
+            b_claw = ttk.Button(PosCtrlFrame, text = "Claw Position", command = lambda: self.handel_PosControll(3))
+
+            # position widgets in Position Control Frame
+            l_title.grid(column = 0, row = 0, columnspan =2)
+            b_sleep.grid(column = 0, row = 1, sticky = tk.NSEW)
+            b_unsleep.grid(column = 1, row = 1, sticky = tk.NSEW)
+            b_extend.grid(column = 0, row = 2, sticky = tk.NSEW)
+            b_claw.grid(column = 1, row = 2, sticky = tk.NSEW)
+
+            # create widgets for End Effector Frame
+
+
+
             presetWindow.protocol("WM_DELETE_WINDOW", lambda: self.handel_quit(presetWindow))
             count +=1
 
@@ -385,10 +486,11 @@ class GUI(tk.Tk):
         label.grid(column =1, row=2, sticky = tk.NSEW)
 
 
+### Command Functions ###
 
     def handle_Send_Command(self, msg, output):
         #Posts command to OutputStream
-        if connected:
+        if 1==1:
             if msg != "" :
                 if msg != "help": 
                     if msg != "addressbook":
@@ -419,8 +521,6 @@ class GUI(tk.Tk):
             msg = ">>!! No Device Connected"
             self.update_CommandOutput(msg, output)
 
-
-
     def handel_Connect_Command(self,port):
         if port != "":
             if not connected:
@@ -440,10 +540,6 @@ class GUI(tk.Tk):
             self.update_CommandOutput(msg, text_output)
 
 
-        
-
-
-
     def handle_Disconnect_Command(self):
         if connected:
             print("Disconeting from ", target_port)
@@ -451,10 +547,30 @@ class GUI(tk.Tk):
             print("Terminal is not Connected to a Port")
 
 
+    def handel_Jog_Command(self,val):
+        subprocess.call(" python test.py 1", shell=True)
+
+
+
+
     def update_CommandOutput(self,msg,output):
         output.config(state = "normal")
         output.insert('end', msg + '\n') # writes msg to terminal 
         output.config(state = 'disabled')  # closes terminal again
+
+
+    def handel_preset_addr(self,address):
+        if address != "":
+            if address in validAddress:
+                # update label
+                # update address
+                target_address = address
+                msg = ">> Address set to: " + address
+                self.update_CommandOutput(msg, text_output)
+            else:
+                target_address = 'NONE'
+                msg = ">>!! Error, Enter a valid Address"
+                self.update_CommandOutput(msg, text_output)
 
     def handel_quit(self,window):
         global count
@@ -468,9 +584,7 @@ class GUI(tk.Tk):
             window.destroy()
         elif res == "no":
             pass
-
     
-        
     def handle_login(self,un, pw, win, label):
         global User
         users  = [i[0] for i in profiles]
