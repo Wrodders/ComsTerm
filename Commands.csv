@@ -1,3 +1,6 @@
-id,
-blink,value
-abs,value/dir
+TargetBoard,CommandID,CommandName,Message
+JC,0,ID, 
+
+,
+,,
+JC,,,
