@@ -13,7 +13,10 @@ from PyQt6.QtWidgets import (QApplication,QWidget, QLabel,
 from PyQt6.QtCore import Qt
 
 
-        
+
+
+
+      
 
 
 
@@ -42,6 +45,7 @@ class MainWindow(QWidget):
     def setUpUI(self):
         vbox = QVBoxLayout(self)
         topFrame = QFrame(self) # Create a frame for the top section
+        topFrame.setFrameShape(QFrame.Shape.StyledPanel)
 
         #Set Up Bottom Tabs        
         bottomTab = QTabWidget(self) # Create a table widget for the bottom section
@@ -55,7 +59,7 @@ class MainWindow(QWidget):
         
         splitter.addWidget(topFrame)
         splitter.addWidget(bottomTab)
-        splitter.setStretchFactor(1, 2)
+        splitter.setStretchFactor(1, 1)
         vbox.addWidget(splitter)
         self.setLayout(vbox)
 
@@ -85,7 +89,7 @@ class MainWindow(QWidget):
         
         # Create Left Frane
         lFrame = QFrame(self)
-        #lFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        
        
         # Create MultiTabWindow for Right Section
         self.mainStack = QStackedWidget(self)
@@ -95,7 +99,7 @@ class MainWindow(QWidget):
 
         splitter.addWidget(lFrame) # Add the left frame to the splitter
         splitter.addWidget(self.mainStack) # Add the MultiTabWindow to the splitter
-        splitter.setStretchFactor(2, 1)
+        splitter.setStretchFactor(1, 1)
         tbox.addWidget(splitter)       # Add the splitter with sub frames to the top frame
 
         # Left Frame Setup #####################################################
@@ -114,18 +118,21 @@ class MainWindow(QWidget):
         scan_Button.clicked.connect(self.handleScan)
         connect_Button.clicked.connect(self.handleConnect)
 
-        f = QFrame(lFrame)
-
+        spacerLf = QFrame(lFrame) 
+        
         # add widgets to left frame
         lGrid = QGridLayout(lFrame) # Create a grid layout for the left frame
         lGrid.addWidget(ports_Entry, 0, 0,1,2)
         lGrid.addWidget(scan_Button, 1, 0)
         lGrid.addWidget(connect_Button, 1, 1 )
         lGrid.addWidget(self.conType_ComboBox, 0, 2)
-        lGrid.addWidget(f, 2, 0)
+        lGrid.addWidget(spacerLf, 2, 0) # Add a spacer to the left frame
+
+
+
 
         # Right Frame Setup ####################################################
-        
+        # add each stack to main stack widget
         self.mainStack.addWidget(slavConn())
         self.mainStack.addWidget(sutImgLoader())
 
@@ -134,8 +141,9 @@ class MainWindow(QWidget):
 
 
     def handleTabChange(self):
+        #On Bottom tab Change index connect to stacked widget
         self.mainStack.setCurrentIndex(self.sender().currentIndex())
-        print(1)
+
 
 
     ##### Functions for handling signals #####
@@ -146,9 +154,6 @@ class MainWindow(QWidget):
         
     def handleConnect(self):
         print("Connecting")
-
-
-
 
 ## Sub Window Classes ##
 
@@ -167,13 +172,21 @@ class slavConn(QWidget):
         table= QTableWidget()
         table.setColumnCount(2)
         table.setRowCount(4)
-        table.setHorizontalHeaderLabels(["Slave ID", "Slave Name"])
 
+
+        table.setHorizontalHeaderLabels(["Slave ID", "Slave Name"])
+        
+        table.setMaximumHeight(100)
+       
+        spacerRf = QFrame(self)
         # add widgets to layout
         grid = QGridLayout(self)
         grid.addWidget(scanSlaves_Button, 0, 0)
         grid.addWidget(connectSlaves_Button, 0, 1)
         grid.addWidget(table, 1, 0,1,2)
+        grid.addWidget(spacerRf, 2, 0)
+        
+
         self.setLayout(grid)
 
 
@@ -189,23 +202,14 @@ class sutImgLoader(QWidget):
         dwldImg_Button.setMaximumWidth(150)
         upldImg_Button = QPushButton("Upload")
         upldImg_Button.setMaximumWidth(150)
+        scanSystem_Button = QPushButton("Scan System Components")
         
         # add widgets to layout
         grid = QGridLayout(self)
         grid.addWidget(imgPath_Entry, 0, 0,1,2)
         grid.addWidget(dwldImg_Button, 1, 0)
         grid.addWidget(upldImg_Button, 1, 1)
-        f = QFrame(self)
-        grid.addWidget(f, 2, 0,1,2)
-
-
-
-
-    
-       
-
-        
-
+        grid.addWidget(scanSystem_Button, 2, 0,1,2)
 
 
 class Login(QDialog):
