@@ -1,6 +1,6 @@
 {
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.colorTheme": "Atom One Dark",
+    "workbench.colorTheme": "Solarized Light",
     "window.autoDetectColorScheme": true,
     "workbench.preferredDarkColorTheme": "Atom One Dark",
     "workbench.preferredLightColorTheme": "Solarized Light"

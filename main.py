@@ -3,6 +3,10 @@
 import sys
 import pandas as pd
 import random
+import csv
+import serial 
+import serial.tools.list_ports 
+
 
 from PyQt6.QtWidgets import (QApplication,QWidget, QLabel, 
                             QPushButton, QLineEdit, QHBoxLayout, QVBoxLayout,
@@ -11,6 +15,40 @@ from PyQt6.QtWidgets import (QApplication,QWidget, QLabel,
                             QMessageBox,QTableWidget,QTableWidgetItem,QCheckBox,QStackedWidget
                             )
 from PyQt6.QtCore import Qt
+
+def readCmds(cmd):
+    if cmd=="":
+        print("no cmd")
+        return None
+    with open('Commands.csv','r') as cmd_File:
+        cmd_reader = csv.reader(cmd_File)
+        cmds_list = list(cmd_reader)
+    c_cmd = [i for i in cmds_list if i[0] == cmd]
+    if len(c_cmd) == 0:
+        print("Command not found")
+        return None
+    print(c_cmd)
+
+def PortScanSerial(app):
+    dlg = QMessageBox(app)
+    dlg.setWindowTitle("Scanning for Ports")
+    dlg.setText("Ensure Device is Disconnected")
+    dlg.setInformativeText("Press OK to Continue")
+    dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
+    dlg.setIcon(QMessageBox.Icon.Information)
+    dlg.exec()
+    iports = list(serial.tools.list_ports.comports())
+    dlg.setText("Connect Device")
+    dlg.exec()
+    fports = list(serial.tools.list_ports.comports())
+    if len(fports) == len(iports):
+        dlg.setText("No Device Found")
+        dlg.setInformativeText("Press OK to Continue")
+        dlg.exec()
+        return None
+    else:
+        cport = [i for i in fports if i not in iports]
+        return cport[0].device
 
 
 
@@ -103,8 +141,8 @@ class MainWindow(QWidget):
         tbox.addWidget(splitter)       # Add the splitter with sub frames to the top frame
 
         # Left Frame Setup #####################################################
-        ports_Entry = QLineEdit()
-        ports_Entry.setPlaceholderText("Enter Port Path")
+        self.ports_Entry = QLineEdit()
+        self.ports_Entry.setPlaceholderText("Enter Port Path")
         
         scan_Button = QPushButton("Scan")
         scan_Button.setMaximumWidth(150)
@@ -122,7 +160,7 @@ class MainWindow(QWidget):
         
         # add widgets to left frame
         lGrid = QGridLayout(lFrame) # Create a grid layout for the left frame
-        lGrid.addWidget(ports_Entry, 0, 0,1,2)
+        lGrid.addWidget(self.ports_Entry, 0, 0,1,2)
         lGrid.addWidget(scan_Button, 1, 0)
         lGrid.addWidget(connect_Button, 1, 1 )
         lGrid.addWidget(self.conType_ComboBox, 0, 2)
@@ -148,9 +186,21 @@ class MainWindow(QWidget):
 
     ##### Functions for handling signals #####
 
-    def handleScan(self,):
+    def handleScan(self):
         print("Scanning")
-        print(self.conType_ComboBox.currentText())
+       
+
+        if self.conType_ComboBox.currentText() == "USB":
+            print(" Scanning USB")
+            self.ports_Entry.setText(PortScanSerial(self))
+            
+        elif self.conType_ComboBox.currentText() == "Ethernet":
+            print(" Scanning Ethernet")
+        elif self.conType_ComboBox.currentText() == "OTA Programer":
+            print(" Scanning OTA")
+            self.ports_Entry.setText(PortScanSerial(self))
+
+
         
     def handleConnect(self):
         print("Connecting")
@@ -262,21 +312,22 @@ class consoleTab(QWidget):
         output_Text.setReadOnly(True)
         output_Text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
-        cmd_Entry = QLineEdit()
-        cmd_Entry.setPlaceholderText("Enter Command")
-        cmd_Entry.returnPressed.connect(self.handleSend)
+        self.cmd_Entry = QLineEdit(self)
+        self.cmd_Entry.setPlaceholderText("Enter Command")
+        self.cmd_Entry.returnPressed.connect(lambda: self.handleSend())
 
         send_Button = QPushButton("Send")
         send_Button.setMaximumWidth(150)
-        send_Button.clicked.connect(self.handleSend)
+        send_Button.clicked.connect(lambda: self.handleSend())
 
         # add widgets to grid
         grid.addWidget(output_Text, 0, 0, 1, 3)
-        grid.addWidget(cmd_Entry, 1, 0, 1, 2)
+        grid.addWidget(self.cmd_Entry, 1, 0, 1, 2)
         grid.addWidget(send_Button, 1, 2)
 
     def handleSend(self):
         print("Sending")
+        readCmds(self.cmd_Entry.text())
 
 class sutTab(QWidget):
     def __init__(self):
