@@ -150,7 +150,7 @@ class MainWindow(QWidget):
         connect_Button.setMaximumWidth(150)
 
         self.conType_ComboBox = QComboBox(self)
-        self.conType_ComboBox.addItems(["OTA Programer", "Ethernet", "USB"])
+        self.conType_ComboBox.addItems(["Serial","Ethernet","OTA Programmer"])
         self.conType_ComboBox.setMaximumWidth(250)
     
         scan_Button.clicked.connect(self.handleScan)
