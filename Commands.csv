@@ -1,0 +1,4 @@
+id,0x00
+joint-run,0x01,pos,speed
+ee-run,0x02,pos,speed
+joint-rev,0x03,cycles,speed
