@@ -48,7 +48,7 @@ def PortScanSerial(app):
         return None
     else:
         cport = [i for i in fports if i not in iports]
-        return cport[0].device
+        return cport[0].device # returns the port path
 
 
 
