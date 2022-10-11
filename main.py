@@ -150,7 +150,7 @@ class MainWindow(QWidget):
         connect_Button.setMaximumWidth(150)
 
         self.conType_ComboBox = QComboBox(self)
-        self.conType_ComboBox.addItems(["Serial","Ethernet","OTA Programmer"])
+        self.conType_ComboBox.addItems(["Serial","Ethernet","OTA Programer"])
         self.conType_ComboBox.setMaximumWidth(250)
     
         scan_Button.clicked.connect(self.handleScan)
@@ -187,17 +187,16 @@ class MainWindow(QWidget):
     ##### Functions for handling signals #####
 
     def handleScan(self):
-        print("Scanning")
+        print(self.conType_ComboBox.currentText())
        
-
-        if self.conType_ComboBox.currentText() == "USB":
-            print(" Scanning USB")
+        if self.conType_ComboBox.currentText() == "Serial":
+            print("Scanning USB")
             self.ports_Entry.setText(PortScanSerial(self))
             
         elif self.conType_ComboBox.currentText() == "Ethernet":
-            print(" Scanning Ethernet")
+            print("Scanning Ethernet")
         elif self.conType_ComboBox.currentText() == "OTA Programer":
-            print(" Scanning OTA")
+            print("Scanning OTA")
             self.ports_Entry.setText(PortScanSerial(self))
 
 
