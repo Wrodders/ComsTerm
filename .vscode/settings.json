@@ -1,7 +1,8 @@
 {
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.colorTheme": "Solarized Light",
+    "workbench.colorTheme": "Atom One Dark",
     "window.autoDetectColorScheme": true,
     "workbench.preferredDarkColorTheme": "Atom One Dark",
-    "workbench.preferredLightColorTheme": "Solarized Light"
+    "workbench.preferredLightColorTheme": "Solarized Light",
+    "python.analysis.typeCheckingMode": "basic"
 }
