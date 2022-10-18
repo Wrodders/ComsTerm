@@ -4,5 +4,12 @@
     "window.autoDetectColorScheme": true,
     "workbench.preferredDarkColorTheme": "Atom One Dark",
     "workbench.preferredLightColorTheme": "Solarized Light",
-    "python.analysis.typeCheckingMode": "basic"
+    "python.analysis.typeCheckingMode": "basic",
+    "cSpell.ignoreWords": [
+        "consolestack",
+        "consoletab",
+        "sutstack",
+        "suttab",
+        "testsignal"
+    ]
 }
