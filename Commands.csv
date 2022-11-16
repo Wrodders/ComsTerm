@@ -1,7 +1,1 @@
-cmdName,cmdID,args,descpriton
-help,0x1,'',Returns list of valid comands
-id,0x2,'',Returns ID info for Device
-blink,0x3,n,Blinks debug LED n times
-targetPos,0x4,"j1,j2,j3",Sets each joint to Jx position in degrees
-dynamicPos,0x5,"x,y,z,pitch,roll,yaw",Sets the dynamic scaler coeffieeincs
-scan-boards,0x5,'',Sends Id command to each board in scan chain
+blink,debug,simData,id
