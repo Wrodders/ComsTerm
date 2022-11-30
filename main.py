@@ -209,18 +209,18 @@ class ConsoleTab(QWidget):
         self.inputEntry.clear()
 
     def holdSend(self):
-        # Disables Send Comand Button to prevent multiple clicks
+        # Disables Send Command Button to prevent multiple clicks
         state = self.sendBtn.isEnabled()
         self.sendBtn.setEnabled(not state)
         self.inputEntry.setEnabled(not state)
 
 
 
-    # COSOLE FUNCTIONS
+    # CONSOLE FUNCTIONS
     def clearConsole(self):
         outputconsole.clear()
     def saveLog(self):
-        #Open file dialoge to save log
+        #Open file dialogue to save log
         pass    
 
     def startMotionControl(self):
@@ -351,7 +351,7 @@ class SerialDevice(QObject):
         
     def initialize(self):
         # Initialize Device collect Device ID and other info
-        # TODO Collect Device ID Seperatly 
+        # TODO Collect Device ID Separately 
         msg  = 'help'
         self.checkCmd(msg) # Send Command to get Device Function List
         

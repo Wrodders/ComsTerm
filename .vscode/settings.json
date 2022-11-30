@@ -11,5 +11,15 @@
         "sutstack",
         "suttab",
         "testsignal"
+    ],
+    "cSpell.words": [
+        "baudrate",
+        "bytesize",
+        "connectionlayout",
+        "dataline",
+        "Dfault",
+        "Dockable",
+        "outputconsole",
+        "serialutil"
     ]
 }
