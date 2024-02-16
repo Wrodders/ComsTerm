@@ -4,16 +4,16 @@ from PyQt6.QtWidgets import *
 
 import sys, argparse
 
-from interface import SerialInterface, SimulatedInterface
+from interface import BaseInterface, SerialInterface, SimulatedInterface
 from plot import  CreatePlot, LinePlot
-from console import CreateConsole, Console, CommandFrame
+from console import CreateConsole, Console, ControlFrame
 from logger import getmylogger
 
 log = getmylogger(__name__)
 
 class GUI(QWidget):
     
-    def __init__(self, receiver:QObject):
+    def __init__(self, receiver:BaseInterface):
         super().__init__()
 
         self.setWindowTitle("ComsTermV4")
@@ -36,14 +36,14 @@ class GUI(QWidget):
 
         #Create Widgets
         self.consoleFrame = TabFrame("Console", 4)
-        self.cmdFrame = CommandFrame()
+        self.controlFrame = ControlFrame()
         self.plotFrame = TabFrame("Plot", 4)
 
         #create Splitters
         vSplit = QSplitter(Qt.Orientation.Vertical)
         vSplit.setChildrenCollapsible(True)
         vSplit.addWidget(self.consoleFrame)
-        vSplit.addWidget(self.cmdFrame)
+        vSplit.addWidget(self.controlFrame)
 
         hSplit = QSplitter(Qt.Orientation.Horizontal) # main splitter
         hSplit.setChildrenCollapsible(True)
@@ -94,8 +94,6 @@ class TabFrame(QFrame):
         self.grid = QGridLayout()
         self.setMinimumWidth = 400
 
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QFrame.Shadow.Raised)
         self.tabs = QTabWidget()
         self.initTabs()
 

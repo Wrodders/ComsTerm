@@ -15,33 +15,53 @@ log = getmylogger(__name__)
 
 MsgFrame = namedtuple("MsgFrame", ['topic', 'msg'])
 
+
+"""
+@Brief: Base Class for an Interface
+
+@Description: Child Classes Implement start() and _run() functions
+"""
+class BaseInterface(QObject):
+    socketDataSig = QtCore.pyqtSignal(tuple)
+
+    def __init__(self):
+        super().__init__()
+        self._stopped = True
+        self._mutex = QMutex()
+        self.thread = threading.Thread(target=self._run)
+
+    
+    def _run(self):
+        raise NotImplementedError("Subclasses must implement _run method")
+    
+    def start(self):
+        raise NotImplementedError("Subclasses must implement start method")
+    
+    def stop(self):
+        self._mutex.lock()
+        self._stopped = True
+        self._mutex.unlock()
+
 """
 @Brief: Generates Simulated data for testing.
 
 @Description:   Simulates different datatypes under different topics,
                 Sends MessageFrames To the Qt Event loop via pyqtSignal. 
 """
-class SimulatedInterface(QObject):
+class SimulatedInterface(BaseInterface):
     socketDataSig = QtCore.pyqtSignal(tuple)
     def __init__(self, rate: float):
         super().__init__()
-        self._stopped = True
-        self._mutex = QMutex()
         self.thread = threading.Thread(target=self._run)
 
         #Simulated only parameters
         self.rate = rate # publish rate in seconds
         self.topicGenFuncMap = {
-            'IMU' : self._generate_imu_data,
+            'LINE' : self._generate_line_data,
             'TELEM' : self._generate_word_data,
             'ACCEL' : self._generate_accel_data,
             'GYRO' : self._generate_gyro_data
         }
-
-    def stop(self):
-        self._mutex.lock()
-        self._stopped = True
-        self._mutex.unlock()
 
     def start(self):
         self.thread.start()
@@ -63,14 +83,14 @@ class SimulatedInterface(QObject):
         return # exit thread
     
     # Private Functions
-    def _generate_imu_data(self) -> str:
-        return ':'.join(map(str, [random.uniform(0.0, 1.0) for _ in range(3)]))
+    def _generate_line_data(self) -> str:
+        return ':'.join(map(str, [round(random.uniform(0.0, 1.0), 3) for _ in range(5)]))
     
     def _generate_accel_data(self) -> str:
-        return ':'.join(map(str, [random.uniform(-1.0, 1.0) for _ in range(3)]))
+        return ':'.join(map(str, [round(random.uniform(-1.0, 1.0),3) for _ in range(3)]))
 
     def _generate_gyro_data(self) -> str:
-        return ':'.join(map(str, [random.uniform(-1.0, 1.0) for _ in range(3)]))
+        return ':'.join(map(str, [round(random.uniform(-1.0, 1.0),3) for _ in range(3)]))
 
     def _generate_word_data(self) -> str:
         sentence = lorem.sentence()
@@ -90,21 +110,13 @@ class SimulatedInterface(QObject):
                 opens thread and connects to port, reads lines terminating in '\n'
                 sends data to Qt Event loop via pyqtSignal.
 '''
-class SerialInterface(QObject):
+class SerialInterface(BaseInterface):
     socketDataSig = QtCore.pyqtSignal(tuple)
     def __init__(self):
         super().__init__()
-        self._stopped = True
-        self._mutex = QMutex()
         self.thread = threading.Thread(target=self._run)
         # Data input
         self.port = serial.Serial()
-
-    def stop(self):
-
-        self._mutex.lock()
-        self._stopped = True
-        self._mutex.unlock()
 
     def start(self):
         key = "usb"
@@ -119,7 +131,7 @@ class SerialInterface(QObject):
             return
 
         self.thread.start()  
-
+        
     # Internal Functions     
     def _run(self):
         # Read and parse msgFrame from Serial Port
@@ -146,7 +158,7 @@ class SerialInterface(QObject):
             msgFrame = line.decode('utf-8').strip[:-1]
         except Exception as e: 
             log.warning(f"{e}")
-            msgFrame = None
+            msgFrame = None 
             return msgFrame
         
         msgFrame = ''.join(char for char in msgFrame if char.isprintable()) # remove null chars
@@ -169,11 +181,12 @@ class SerialInterface(QObject):
         self.port.port = portNum
         self.port.baudrate = baud
         self.port.timeout = 0.1
-        self.port.xonxoff=1
+        self.port.xonxoff = 1
         try:
             self.port.open()
         except serial.SerialException as e:
             log.error(f"Exception in Serial connect:{e} ")
+            return False
         else:
             log.info(f'Connection to {portNum} Successful')
             return True
@@ -261,22 +274,14 @@ class ZmqSub:
 """
 @Breif: WIP
 """
-class ZmqInterface(QObject):
+class ZmqInterface(BaseInterface):
 
     socketDataSig = QtCore.pyqtSignal(tuple)
 
     def __init__(self, socketAddress : str ): 
         super().__init__()
-        self._stopped = True
-        self._mutex = QMutex()
         self.thread = threading.Thread(target=self._run)
         self.socketAddr = socketAddress
-
-    def stop(self):
-        print("Stop")
-        self._mutex.lock()
-        self._stopped = True
-        self._mutex.unlock()
         
     def start(self):
         self.thread.start()
