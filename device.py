@@ -118,12 +118,13 @@ class BaseInterface(QObject):
         elif len(cmdArgs) != len(fmtArgs) or ''  in cmdArgs:
                 log.warning(f"Cmd syntax error, see {cmdName} {fmt}")
                 return ''
-        else:
-            data = ":".join(cmdParts[1:]) # exclude cmdName
-            cmdID = self.cmdMap.getIDByName(cmdName)
-            # compose packet 
-            msgPacket = '<' + str(len(data)) + cmdID + data + '\n'
-            return msgPacket
+        
+        data = ":".join(cmdParts[1:]) # exclude cmdName
+        cmdID = self.cmdMap.getIDByName(cmdName)
+        # compose packet 
+        msgPacket = '<' + str(len(data)) + cmdID + data + '\n'
+        
+        return msgPacket
         
     def sendCmd(self, text:str):
         #Pushes cmd to IO Queue

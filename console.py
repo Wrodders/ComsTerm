@@ -126,10 +126,7 @@ class CommandFrame(QFrame):
             self.sendB.setEnabled(False)
 
 
-        
-
- 
-    
+           
 class JoyPad(QWidget):
     def __init__(self):
         super().__init__()
@@ -256,7 +253,3 @@ class ControlFrame(QFrame):
         self.vBox.addWidget(self.tabs)
         self.setLayout(self.vBox)
         
-
-
-
-
