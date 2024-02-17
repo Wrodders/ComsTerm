@@ -146,6 +146,3 @@ class CreatePlot(QDialog):
         
 
         return (topic, plotType, yRange, timeWindow, protocol)
-
-
-

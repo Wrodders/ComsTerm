@@ -3,8 +3,6 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
 
-
-
 from logger import getmylogger
 
 log = getmylogger(__name__)
@@ -89,7 +87,6 @@ class CommandFrame(QFrame):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.connectSignals()
         
     def initUI(self):
         self.setContentsMargins(0,0,0,0)
@@ -101,6 +98,7 @@ class CommandFrame(QFrame):
 
         self.cmdEntry = QLineEdit()
         self.cmdEntry.setMinimumWidth(100)
+        self.cmdEntry.textChanged.connect(self.enableSend)
         self.sendB = QPushButton("Send")
         self.sendB.setMaximumWidth(100)
 
@@ -110,18 +108,27 @@ class CommandFrame(QFrame):
         self.grid.addWidget(self.sendB, 2,1)
         self.setLayout(self.grid)
 
-    def connectSignals(self):
-        pass
     @QtCore.pyqtSlot(str)
     def _updateData(self, msg : str):
         '''Update Console with new data'''
-        if(msg == ""):
+        if msg == "":
             return
         if self.console.document().lineCount() > 200:
             self.console.clear()
 
         self.console.append(msg) # add data to console 
 
+    def enableSend(self):
+        '''Stops Spamming Send'''
+        if self.cmdEntry.text():
+            self.sendB.setEnabled(True)
+        else: 
+            self.sendB.setEnabled(False)
+
+
+        
+
+ 
     
 class JoyPad(QWidget):
     def __init__(self):
@@ -192,13 +199,6 @@ class JoyPad(QWidget):
             newPos = currentPos + QPoint(step, 0)
             self.updatePos(newPos)
 
-
-
-
-
- 
-
-
 class Speedometer(QWidget):
 
     def __init__(self):
@@ -222,8 +222,6 @@ class Speedometer(QWidget):
     def updateSpeed(self, val : float):
         self.speedLCD.display(val)
 
-
-
 class Remote(QWidget):
     def __init__(self):
         super().__init__()
@@ -239,8 +237,6 @@ class Remote(QWidget):
         self.grid.addWidget(self.joyPad, 0,0, 2,2)
         self.grid.addWidget(self.speedometer, 0,2, 2,1)
         self.setLayout(self.grid)
-
-
 
 class ControlFrame(QFrame):
     def __init__(self):
