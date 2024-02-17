@@ -2,7 +2,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.animation as animation
 
 from logger import getmylogger
@@ -13,7 +13,7 @@ log = getmylogger(__name__)
 plt.style.use('dark_background')
 
 class LinePlot(QWidget):
-    def __init__(self, title: str, yrange: list[float, float], xrange:int, protocol :str):
+    def __init__(self, title: str, yrange: tuple[float, float], xrange:int, protocol :str):
         super().__init__()
         self.topic = title
         self.protocol = protocol.split(":") # msgData format
@@ -146,6 +146,3 @@ class CreatePlot(QDialog):
         
 
         return (topic, plotType, yRange, timeWindow, protocol)
-
-
-

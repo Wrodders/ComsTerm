@@ -4,28 +4,28 @@ from PyQt6.QtWidgets import *
 
 import sys, argparse
 
-from interface import SerialInterface, SimulatedInterface
+from device import BaseInterface, SerialDevice, SimulatedDevice
 from plot import  CreatePlot, LinePlot
-from console import CreateConsole, Console, CommandFrame
+from console import CreateConsole, Console, ControlFrame
 from logger import getmylogger
 
 log = getmylogger(__name__)
 
 class GUI(QWidget):
     
-    def __init__(self, receiver:QObject):
+    def __init__(self, deviceInterface:BaseInterface):
         super().__init__()
 
         self.setWindowTitle("ComsTermV4")
-        self.receiver = receiver
-        self.receiver.start() # data interface Thread
+        self.device = deviceInterface
+        self.device.start() # Begin Device Server
 
         self.initUI()
         self.connectSignals()
 
     def closeEvent(self, event):
         log.info("Closing GUI")
-        self.receiver.stop() # stop thread
+        self.device.stop() # stop thread
         event.accept()
     def initUI(self): 
         self.setGeometry(100,100, 600, 300)
@@ -36,14 +36,14 @@ class GUI(QWidget):
 
         #Create Widgets
         self.consoleFrame = TabFrame("Console", 4)
-        self.cmdFrame = CommandFrame()
+        self.controlFrame = ControlFrame()
         self.plotFrame = TabFrame("Plot", 4)
 
         #create Splitters
         vSplit = QSplitter(Qt.Orientation.Vertical)
         vSplit.setChildrenCollapsible(True)
         vSplit.addWidget(self.consoleFrame)
-        vSplit.addWidget(self.cmdFrame)
+        vSplit.addWidget(self.controlFrame)
 
         hSplit = QSplitter(Qt.Orientation.Horizontal) # main splitter
         hSplit.setChildrenCollapsible(True)
@@ -56,6 +56,7 @@ class GUI(QWidget):
     def connectSignals(self):
         self.plotFrame.newTabB.clicked.connect(self.newPlotHandle)
         self.consoleFrame.newTabB.clicked.connect(self.newConsoleHandle)
+        self.controlFrame.commander.sendB.clicked.connect(self.sendCmdHandel)
 
     def newPlotHandle(self):
         if self.plotFrame.checkMaxTabs():
@@ -67,7 +68,7 @@ class GUI(QWidget):
             if plotType == "Line Plot":
                 plot = LinePlot(topic, yRange, time_window, protocol)
                 self.plotFrame.newTab(plot, topic)
-                self.receiver.socketDataSig.connect(plot._updateData) # connect new plot to signal
+                self.device.deviceDataSig.connect(plot._updateData) # connect new plot to signal
 
     def newConsoleHandle(self):
         if self.consoleFrame.checkMaxTabs():
@@ -78,7 +79,13 @@ class GUI(QWidget):
             topic = diag.getValues()
             console = Console(topic=topic)
             self.consoleFrame.newTab(console, topic)
-            self.receiver.socketDataSig.connect(console._updateData)
+            self.device.deviceDataSig.connect(console._updateData)
+
+    def sendCmdHandel(self):
+        text = self.controlFrame.commander.cmdEntry.text()
+        self.device.sendCmd(text)
+
+
 
 
 class TabFrame(QFrame):
@@ -94,8 +101,6 @@ class TabFrame(QFrame):
         self.grid = QGridLayout()
         self.setMinimumWidth = 400
 
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QFrame.Shadow.Raised)
         self.tabs = QTabWidget()
         self.initTabs()
 
@@ -148,9 +153,9 @@ def main():
     args = parse_command_line_args()
 
     if args.serial:
-        dataInterface = SerialInterface()
+        dataInterface = SerialDevice()
     elif args.simulated:
-        dataInterface = SimulatedInterface(0.01)
+        dataInterface = SimulatedDevice(0.01)
     else:
         print("Error: Please specify either --serial or --simulated")
         return
@@ -164,6 +169,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
