@@ -3,7 +3,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 
-import sys, random, threading, time, lorem, zmq
+import sys, random, threading, time, lorem, zmq, re
 import serial,serial.tools.list_ports
 from queue import Queue, Empty
 from dataclasses import dataclass, astuple, asdict
@@ -24,16 +24,36 @@ class MsgFrame():
     ID: str = ""
     data: str = ""
 
+    @classmethod
+    def extractMsg(cls, msgPacket: bytes):
+        try:
+            msg = msgPacket.decode('utf-8')
+        except UnicodeDecodeError as e:
+            log.warning(f"{e}")
+            return None
+        
+        # Extract SIZE ID DATA
+        match = re.match(r'<(.)(.):([^\x00]+)\x00\n', msg)
+        if match:
+            size = int(match.group(1))
+            ID = match.group(2)
+            data = match.group(3)
+            if len(data) == size:
+                return cls(size, ID, data)
+        else:
+            return None
+        
+        
 @dataclass
-class Cmd():
+class Topic():
     ID : str = ""
     name : str = ""
     fmt : str = ""
 
 
-class CmdMap:
+class TopicMap:
     def __init__(self, cmds):
-        self.cmds: Dict[str, Cmd] = {}
+        self.cmds: Dict[str, Topic] = {}
         if cmds:
             for cmd in cmds:
                 self.addCmd(cmd)
@@ -57,7 +77,7 @@ class CmdMap:
     def getAllCmds(self) -> List[Tuple[str, str]]:
         return [(cmd.name, cmd.fmt) for cmd in self.cmds.values()]
 
-    def addCmd(self, cmd: Cmd):
+    def addCmd(self, cmd: Topic):
         self.cmds[cmd.ID] = cmd
         self.cmds[cmd.name] = cmd
 
@@ -82,6 +102,12 @@ ID   --  Topic Identifier
 DATA -- LEN bytes of data
 EOF  -- End of Frame == '\n'
 
+
+Each Device has a set of Topics that it Publishes data on and Topics that it receives Cmds On. 
+BaseInterface initializes the default set of CMDs and PUBs that each device Must implement
+The ID Cmd is special as it requests the Device to send information on its device Specific Topics
+This is then used to map topic IDs to Names and formats used for validation 
+
 """
 class BaseInterface(QObject):
     deviceDataSig = QtCore.pyqtSignal(tuple)
@@ -95,10 +121,18 @@ class BaseInterface(QObject):
 
         #create DeviceInterface Cmds 
         cmds = [
-            Cmd(ID = '0', name = "ID", fmt=""),
-            Cmd(ID = '1', name="RESET", fmt="d:d"),
+            Topic(ID = '0', name = "ID", fmt=""),
+            Topic(ID = '1', name="RESET", fmt="d:d"),
         ]
-        self.cmdMap = CmdMap(cmds)
+        # create DeviceInterface Pubs
+        pubs = [
+            Topic(ID = '0', name= "CMD_RET", fmt ="s"),
+            Topic(ID = '1', name= "ERR", fmt= "s"),
+            Topic(ID = '2', name = "INFO", fmt="s"),
+
+        ]
+        self.cmdMap = TopicMap(cmds)
+        self.pubMap = TopicMap(pubs)
 
     def parseCmd(self, text: str) -> str :
         cmdParts = text.split(" ") # cmdName arg1 arg2 argN
@@ -159,9 +193,8 @@ class SimulatedDevice(BaseInterface):
         self.rate = rate # publish rate in seconds
         self.topicGenFuncMap = {
             'LINE' : self._generate_line_data,
-            'TELEM' : self._generate_word_data,
+            'INFO' : self._generate_word_data,
             'ACCEL' : self._generate_accel_data,
-            'GYRO' : self._generate_gyro_data
         }
     
     def start(self):
@@ -179,10 +212,9 @@ class SimulatedDevice(BaseInterface):
             except Exception as e:
                 log.error(f"Exception in Simulated Data :{e}")
                 break
-
             try:
                 cmdPacket = self.cmdQueue.get_nowait()
-                #print(cmdPacket)
+                print(cmdPacket)
             except Empty:
                 pass
             except Exception as e:
@@ -248,17 +280,12 @@ class SerialDevice(BaseInterface):
         while (not self._stopped) and self.port.is_open:
             try: 
                 # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
-                msgPacket = self.port.readline().decode('utf-8')
-                if msgPacket.startswith('<'): 
-                    recvMsg.size = int(msgPacket[1])
-                    recvMsg.ID = msgPacket[2]
-                    dataPart = msgPacket[3:]
-                    recvMsg.data = dataPart.join(char for char in dataPart if char.isprintable()) # remove null chars
-                    if len(recvMsg.data) > recvMsg.size:
-                        recvMsg.size = 0 # escape msg sequence
-                        continue # discard msg
-                    else:
+                msgPacket = self.port.readline()
+                if msgPacket[0] == '<':  # SOF Received
+                    recvMsg = MsgFrame.extractMsg(msgPacket)
+                    if recvMsg:
                         self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
+ 
             except Exception as e:
                 log.error(f"Exception in Serial Read: {e}")
                 break 
