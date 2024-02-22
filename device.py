@@ -345,6 +345,49 @@ class SerialDevice(BaseInterface):
             return True
         
     
+class BLEDevice(BaseInterface):
+    def __init__(self, dev_pts):
+        super().__init__()
+        self.dev_pts = dev_pts
+        self.file_handle = None
+    
+    def _run(self):
+        # Open the file representing the virtual COM port
+        self.file_handle = open(self.dev_pts, 'r+')
+        
+        # Start reading data from the file
+        while not self._stopped:
+            try: 
+                # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
+                msgPacket = self.port.readline()
+                if msgPacket[0] == '<':  # SOF Received
+                    recvMsg = MsgFrame.extractMsg(msgPacket)
+                    if recvMsg:
+                        self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
+ 
+            except Exception as e:
+                log.error(f"Exception in Serial Read: {e}")
+                break 
+
+            if not self.cmdQueue.empty():
+                cmd_packet = self.cmdQueue.get()
+                self.file_handle.write(cmd_packet)  # Send command packet to the device
+                self.file_handle.flush()  # Flush the buffer to ensure data is sent immediately
+                # Implement code to handle responses from the device if needed
+            time.sleep(0.1)  # Adjust sleep time as needed
+    
+    def start(self):
+        self._mutex.lock()
+        self._stopped = False
+        self._mutex.unlock()
+        self.thread.start()  # Start the thread for running the BLEDevice
+    
+    def stop(self):
+        super().stop()  # Call the stop method of the base class
+        if self.file_handle:
+            self.file_handle.close()  # Close the file handle when stopping
+
+
 
 """
 @Breif: ZMQ Publish socket with added functionality.

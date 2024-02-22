@@ -145,6 +145,7 @@ def parse_command_line_args():
     parser = argparse.ArgumentParser(description="GUI application with different data receivers")
     parser.add_argument('--serial', action='store_true', help='Use serial interface')
     parser.add_argument('--simulated', action='store_true', help='Use simulated interface')
+    parser.add_argument('--ble', action='store_true', help='Use ble interface')
     #parser.add_argument('--zmq', action='store_true', help='Use zmq interface')
     return parser.parse_args()
 
@@ -156,6 +157,8 @@ def main():
         dataInterface = SerialDevice()
     elif args.simulated:
         dataInterface = SimulatedDevice(0.01)
+    elif args.ble:
+        dataInterface = BLEDevice("18:62:E4:3C:85:E5")
     else:
         print("Error: Please specify either --serial or --simulated")
         return
