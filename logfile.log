@@ -1,0 +1,7 @@
+2024-02-29 22:28:47,211~WARNING~Cmd syntax error: incorrect num args for ID ~module:device~function:device
+2024-02-29 22:28:49,660~WARNING~Cmd syntax error: incorrect num args for ID ~module:device~function:device
+2024-02-29 22:28:53,244~WARNING~Cmd syntax error: incorrect num args for ID ~module:device~function:device
+2024-02-29 22:28:56,978~WARNING~Cmd syntax error: incorrect num args for ID ~module:device~function:device
+2024-02-29 22:29:00,194~WARNING~Cmd Name; : not found~module:device~function:device
+2024-02-29 22:29:04,043~WARNING~Cmd Name; : not found~module:device~function:device
+2024-02-29 22:29:08,176~WARNING~Cmd Name; asdasda not found~module:device~function:device

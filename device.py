@@ -6,7 +6,8 @@ from PyQt6.QtWidgets import *
 import sys, random, threading, time, lorem, zmq, re
 import serial,serial.tools.list_ports
 from queue import Queue, Empty
-from dataclasses import dataclass, astuple, asdict
+from dataclasses import dataclass, astuple, asdict, field
+from typing import Dict, List, Tuple
 
 from typing import Dict, Tuple, List
 
@@ -17,7 +18,23 @@ from logger import getmylogger
 log = getmylogger(__name__)
 
 
+''' 
+MsgFrame: Represents the raw serialized msg from a device. 
 
+|-------------Packet---------|
+|-----+-----+----+- - - +----|
+| SOF | LEN | ID | DATA | EOF|
+| 1   | 1   | 1  | ...  | 1  |
+|-----+-----+----+- - - +----|
+      |-------Frame-----|
+
+SOF  -- Start of Frame  == '<'
+LEN  -- Size of Data (bytes)
+ID   --  Topic Identifier 
+DATA -- LEN bytes of data
+EOF  -- End of Frame == '\n'
+    
+'''
 @dataclass
 class MsgFrame():
     size: int =  0
@@ -33,7 +50,8 @@ class MsgFrame():
             return None
         
         # Extract SIZE ID DATA
-        match = re.match(r'<(.)(.):([^\x00]+)\x00\n', msg)
+        print(msg)
+        match = re.match(r'<(.)(.):([^\x00]+)\x00\n', msg) # this doesnt work
         if match:
             size = int(match.group(1))
             ID = match.group(2)
@@ -43,127 +61,112 @@ class MsgFrame():
         else:
             return None
         
-        
-@dataclass
-class Topic():
-    ID : str = ""
-    name : str = ""
-    fmt : str = ""
 
+""" 
+Topics: Devices Publish Data over topics. 
+        Descriptive names are mapped to msg ids.
+        Msgs validated Topics protocol
+"""
+
+@dataclass
+class Topic:
+    ID : str = "" # Topics ID
+    name : str = "" # Topics Name
+    fmt : str = "" # Topics Data Format 
+    delim : str = "," # Data Argument Delimiter
+    nArgs : int = 0 # Number of Arguments in Topics Data
 
 class TopicMap:
-    def __init__(self, cmds):
-        self.cmds: Dict[str, Topic] = {}
-        if cmds:
-            for cmd in cmds:
-                self.addCmd(cmd)
+    def __init__(self): 
+        self.topics: Dict[str, Topic] = {}
 
     def getFormatByName(self, name: str) -> str:
-        cmd = self.cmds.get(name)
-        return cmd.fmt if cmd else ""
+        topic = self.topics.get(name)
+        return topic.fmt if topic else ""
 
     def getFormatByID(self, ID: str) -> str:
-        cmd = self.cmds.get(ID)
-        return cmd.fmt if cmd else ""
+        topic = self.topics.get(ID)
+        return topic.fmt if topic else ""
 
     def getNameByID(self, ID: str) -> str:
-        cmd = self.cmds.get(ID)
-        return cmd.name if cmd else ""
+        topic = self.topics.get(ID)
+        return topic.name if topic else ""
     
     def getIDByName(self, name:str) -> str:
-        cmd = self.cmds.get(name)
-        return cmd.ID if cmd else ""
+        topic = self.topics.get(name)
+        return topic.ID if topic else ""
 
-    def getAllCmds(self) -> List[Tuple[str, str]]:
-        return [(cmd.name, cmd.fmt) for cmd in self.cmds.values()]
+    def getAllTopics(self) -> List[Tuple[str, str, int]]:
+        return [(topic.name, topic.fmt, topic.nArgs) for topic in self.topics.values()]
 
-    def addCmd(self, cmd: Topic):
-        self.cmds[cmd.ID] = cmd
-        self.cmds[cmd.name] = cmd
-
-
-"""
-@Brief: Base Class for an Interface
-
-@Description: Child Classes Implement start() and _run() functions
-
-Handles communications through Messages delimited by a Packet defined as:
-
-|-------------Packet---------|
-|-----+-----+----+- - - +----|
-| SOF | LEN | ID | DATA | EOF|
-| 1   | 1   | 1  | ...  | 1  |
-|-----+-----+----+- - - +----|
-      |-------Frame-----|
-
-SOF  -- Start of Frame  == '<'
-LEN  -- Size of Data (bytes)
-ID   --  Topic Identifier 
-DATA -- LEN bytes of data
-EOF  -- End of Frame == '\n'
+    def registerTopic(self, topicID : str, topicName: str, topicFmt: str, delim: str):
+        if delim != "":
+            numArgs = len(topicFmt.split(delim))
+        else:
+            numArgs = 0
+        newTopic = Topic(ID=topicID, name=topicName, fmt=topicFmt, delim=delim, nArgs= numArgs)
+        self.topics[newTopic.name] = newTopic
 
 
-Each Device has a set of Topics that it Publishes data on and Topics that it receives Cmds On. 
-BaseInterface initializes the default set of CMDs and PUBs that each device Must implement
-The ID Cmd is special as it requests the Device to send information on its device Specific Topics
-This is then used to map topic IDs to Names and formats used for validation 
+       
 
 """
-class BaseInterface(QObject):
+@Brief: Base Class for a Device. Handles communications between device and ComsTerm.
+@Description:   Implements a set of CMDs and PUBs topics. Parses and Validates Commands against a devices protocols. 
+                Controls the Child Devices _run() method to obtain data from I/O.
+"""
+class BaseDevice(QObject):
     deviceDataSig = QtCore.pyqtSignal(tuple)
 
     def __init__(self):
         super().__init__()
         self._stopped = True
         self._mutex = QMutex()
-        self.thread = threading.Thread(target=self._run)
+        self.wThread = threading.Thread(target=self._run)
         self.cmdQueue = Queue() 
 
-        #create DeviceInterface Cmds 
-        cmds = [
-            Topic(ID = '0', name = "ID", fmt=""),
-            Topic(ID = '1', name="RESET", fmt="d:d"),
-        ]
-        # create DeviceInterface Pubs
-        pubs = [
-            Topic(ID = '0', name= "CMD_RET", fmt ="s"),
-            Topic(ID = '1', name= "ERR", fmt= "s"),
-            Topic(ID = '2', name = "INFO", fmt="s"),
+        # Create Base Topic Maps
+        self.cmdMap = TopicMap()
+        self.pubMap = TopicMap()
 
-        ]
-        self.cmdMap = TopicMap(cmds)
-        self.pubMap = TopicMap(pubs)
+        self.cmdMap.registerTopic(topicID = '0', topicName="ID", topicFmt="", delim="")
+        self.cmdMap.registerTopic(topicID = '1', topicName="RESET", topicFmt="d:d", delim=":")
 
-    def parseCmd(self, text: str) -> str :
-        cmdParts = text.split(" ") # cmdName arg1 arg2 argN
+        self.pubMap.registerTopic(topicID = '0', topicName="CMD_RET", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = '1', topicName="ERR", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = '2', topicName="INFO", topicFmt="s", delim="")
+
+
+    def parseCmd(self, text: str) -> str:
+        cmdParts = text.split(" ", 1) # cmdName arguments
         cmdName = cmdParts[0] 
-        if cmdName not in self.cmdMap.cmds:
+        cmdTopic = self.cmdMap.topics.get(cmdName)
+        if cmdTopic == None: # exit early if cmd name wrong 
             log.warning(f"Cmd Name; {cmdName} not found")
-            return ''
+            return ""
 
-        cmdArgs = " ".join(cmdParts[1:]).split(" ")
-        fmt = str(self.cmdMap.getFormatByName(cmdName)) # e.g d:d:f 
-        fmtArgs = self.cmdMap.getFormatByName(cmdName).split(":")
-        if fmtArgs == ['']:
-            # Cmd Takes no input 
-            if cmdArgs != ['']:
-                log.warning(f"Cmd syntax error, see {cmdName} {fmt}")
-                return ''
-        elif len(cmdArgs) != len(fmtArgs) or ''  in cmdArgs:
-                log.warning(f"Cmd syntax error, see {cmdName} {fmt}")
-                return ''
-        
-        data = ":".join(cmdParts[1:]) # exclude cmdName
-        cmdID = self.cmdMap.getIDByName(cmdName)
-        # compose packet 
-        msgPacket = '<' + str(len(data)) + cmdID + data + '\n'
-        
+        fmt = cmdTopic.fmt # grab the topics protocol format string
+        cmdArgs = cmdParts[1:] #extract arguments
+        if cmdArgs == []:
+            numArgs = 0
+        else:
+            numArgs = sum(1 for c in cmdArgs[0] if c == cmdTopic.delim) + 1 # num args = num delim + 1 
+        print(cmdArgs, numArgs, cmdTopic.nArgs)
+        if numArgs != cmdTopic.nArgs
+            log.warning(f"Cmd syntax error: incorrect num args for {cmdName} {fmt}")
+            return ""
+
+        data = cmdTopic.delim.join(cmdArgs)  # Join arguments using delimiter
+        cmdID = cmdTopic.ID
+        # assemble packet 
+        msgPacket = f'<{len(data)}{cmdID}{data}\n'
+    
         return msgPacket
         
     def sendCmd(self, text:str):
         #Pushes cmd to IO Queue
         packet = self.parseCmd(text)
-        if packet != '':
+        if packet != "":
             self.cmdQueue.put(packet)
     
     def _run(self):
@@ -183,11 +186,13 @@ class BaseInterface(QObject):
 @Description:   Simulates different datatypes under different topics,
                 Sends MessageFrames To the Qt Event loop via pyqtSignal. 
 """
-class SimulatedDevice(BaseInterface):
+class SimulatedDevice(BaseDevice):
     def __init__(self, rate: float):
-        super().__init__()
-        self.thread = threading.Thread(target=self._run)
-        
+        super().__init__()        
+        # Register Device Topics
+        self.pubMap.registerTopic(topicID='3', topicName="LINE", topicFmt="f:f:f:f", delim=":")
+
+        print(f"PUB: {self.pubMap.getAllTopics()}")
 
         #Simulated only parameters
         self.rate = rate # publish rate in seconds
@@ -198,7 +203,7 @@ class SimulatedDevice(BaseInterface):
         }
     
     def start(self):
-        self.thread.start()
+        self.wThread.start()
     
     def _run(self):
         '''Execute Thread'''
@@ -212,7 +217,8 @@ class SimulatedDevice(BaseInterface):
             except Exception as e:
                 log.error(f"Exception in Simulated Data :{e}")
                 break
-            try:
+
+            try: # Send Cmd MsgPacket to Device
                 cmdPacket = self.cmdQueue.get_nowait()
                 print(cmdPacket)
             except Empty:
@@ -252,10 +258,9 @@ class SimulatedDevice(BaseInterface):
                 opens thread and connects to port, reads lines terminating in '\n'
                 sends data to Qt Event loop via pyqtSignal.
 '''
-class SerialDevice(BaseInterface):
+class SerialDevice(BaseDevice):
     def __init__(self):
         super().__init__()
-        self.thread = threading.Thread(target=self._run) # IO
         self.port = serial.Serial() # Data input
 
     def start(self):
@@ -270,7 +275,7 @@ class SerialDevice(BaseInterface):
             log.warning(f"Serial I/O Thread not started")
             return
 
-        self.thread.start()  
+        self.wThread.start()  
         
     # ********************** IO THREAD ************************* # 
     def _run(self):
@@ -281,11 +286,19 @@ class SerialDevice(BaseInterface):
             try: 
                 # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
                 msgPacket = self.port.readline()
-                if msgPacket[0] == '<':  # SOF Received
-                    recvMsg = MsgFrame.extractMsg(msgPacket)
-                    if recvMsg:
-                        self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
- 
+              
+                #recvMsg = MsgFrame.extractMsg(msgPacket)
+
+                try:
+                    msg = msgPacket.decode('utf-8').rstrip("\n")
+                    msg = msg.replace('\x00','')
+                except UnicodeDecodeError as e:
+                    log.warning(f"{e}")
+                    continue
+                                
+                if msg != '':
+                    self.deviceDataSig.emit(("ODOM", msg)) # output Data
+
             except Exception as e:
                 log.error(f"Exception in Serial Read: {e}")
                 break 
@@ -345,7 +358,7 @@ class SerialDevice(BaseInterface):
             return True
         
     
-class BLEDevice(BaseInterface):
+class BLEDevice(BaseDevice):
     def __init__(self, dev_pts):
         super().__init__()
         self.dev_pts = dev_pts
@@ -380,7 +393,7 @@ class BLEDevice(BaseInterface):
         self._mutex.lock()
         self._stopped = False
         self._mutex.unlock()
-        self.thread.start()  # Start the thread for running the BLEDevice
+        self.wThread.start()  # Start the thread for running the BLEDevice
     
     def stop(self):
         super().stop()  # Call the stop method of the base class
@@ -447,14 +460,13 @@ class ZmqSub:
 """
 @Breif: WIP
 """
-class ZmqDevice(BaseInterface):
+class ZmqDevice(BaseDevice):
     def __init__(self, socketAddress : str ): 
         super().__init__()
-        self.thread = threading.Thread(target=self._run)
         self.socketAddr = socketAddress
         
     def start(self):
-        self.thread.start()
+        self.wThread.start()
 
     def _run(self):
         '''Execute Thread'''

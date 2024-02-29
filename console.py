@@ -82,7 +82,7 @@ class CreateConsole(QDialog):
         return str(topic)
 
 
-class CommandFrame(QFrame):
+class Commander(QWidget):
     cmdSendSig = QtCore.pyqtSignal(str)
     def __init__(self):
         super().__init__()
@@ -98,6 +98,7 @@ class CommandFrame(QFrame):
 
         self.cmdEntry = QLineEdit()
         self.cmdEntry.setMinimumWidth(100)
+        self.cmdEntry.setMinimumHeight(25)
         self.cmdEntry.textChanged.connect(self.enableSend)
         self.sendB = QPushButton("Send")
         self.sendB.setMaximumWidth(100)
@@ -235,7 +236,7 @@ class Remote(QWidget):
         self.grid.addWidget(self.speedometer, 0,2, 2,1)
         self.setLayout(self.grid)
 
-class ControlFrame(QFrame):
+class ControlFrame(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
@@ -243,7 +244,7 @@ class ControlFrame(QFrame):
     def initUI(self):
         self.setContentsMargins(0,0,0,0)
 
-        self.commander = CommandFrame()
+        self.commander = Commander()
         self.remote = Remote()
         self.tabs = QTabWidget()
         self.tabs.addTab(self.commander, "Commander")

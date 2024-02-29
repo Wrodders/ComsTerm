@@ -1,19 +1,28 @@
+"""
+Main Process Interaction GUI Pr
+Handles creation of new GUI submodules and IO Threads
+
+Each Device has its own IO thread
+GUI Communicated to device
+"""
+
+
 from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 import sys, argparse
 
-from device import BaseInterface, SerialDevice, SimulatedDevice
+from device import BaseDevice, SerialDevice, SimulatedDevice, BLEDevice
 from plot import  CreatePlot, LinePlot
-from console import CreateConsole, Console, ControlFrame
+from console import CreateConsole, Console, ControlFrame, Commander
 from logger import getmylogger
 
 log = getmylogger(__name__)
 
 class GUI(QWidget):
     
-    def __init__(self, deviceInterface:BaseInterface):
+    def __init__(self, deviceInterface:BaseDevice):
         super().__init__()
 
         self.setWindowTitle("ComsTermV4")
@@ -28,112 +37,57 @@ class GUI(QWidget):
         self.device.stop() # stop thread
         event.accept()
     def initUI(self): 
-        self.setGeometry(100,100, 600, 300)
+        self.setGeometry(100,100, 300, 300)
 
         self.grid = QGridLayout()
-        self.grid.setContentsMargins(0,0,0,0)
+        self.grid.setContentsMargins(10,10,10,10)
         self.setLayout(self.grid)
 
         #Create Widgets
-        self.consoleFrame = TabFrame("Console", 4)
-        self.controlFrame = ControlFrame()
-        self.plotFrame = TabFrame("Plot", 4)
 
-        #create Splitters
-        vSplit = QSplitter(Qt.Orientation.Vertical)
-        vSplit.setChildrenCollapsible(True)
-        vSplit.addWidget(self.consoleFrame)
-        vSplit.addWidget(self.controlFrame)
+        self.settingsB = QPushButton("Settings")
+        self.settingsB.setMaximumWidth(100)
+        self.connectionB = QPushButton("Connections")
+        self.connectionB.setMaximumWidth(100)
+        self.newConsoleB = QPushButton("New Console")
+        self.newConsoleB.setMaximumWidth(100)
+        self.newPlotB = QPushButton("New Plot")
+        self.newPlotB.setMaximumWidth(100)
 
-        hSplit = QSplitter(Qt.Orientation.Horizontal) # main splitter
-        hSplit.setChildrenCollapsible(True)
-        hSplit.addWidget(vSplit) # add splitter Frames to left
-        hSplit.addWidget(self.plotFrame)
-
+        self.commander = Commander()
         # Add to Layout
-        self.grid.addWidget(hSplit)
+        self.grid.addWidget(self.settingsB, 0,0)
+        self.grid.addWidget(self.connectionB, 0,1)
+        self.grid.addWidget(self.newPlotB, 0,2)
+        self.grid.addWidget(self.newConsoleB, 0,3)
+        self.grid.addWidget(self.commander, 1,0, 4, 4)
+        
         
     def connectSignals(self):
-        self.plotFrame.newTabB.clicked.connect(self.newPlotHandle)
-        self.consoleFrame.newTabB.clicked.connect(self.newConsoleHandle)
-        self.controlFrame.commander.sendB.clicked.connect(self.sendCmdHandel)
+        self.newPlotB.clicked.connect(self.newPlotHandle)
+        self.newConsoleB.clicked.connect(self.newConsoleHandle)
+        self.commander.sendB.clicked.connect(self.sendCmdHandel)
+        self.settingsB.clicked.connect(self.settingsHandel)
+        self.connectionB.clicked.connect(self.connectionHandel)
+     
 
     def newPlotHandle(self):
-        if self.plotFrame.checkMaxTabs():
-            log.error("Max Number of plots reached")
-            return 
         diag = CreatePlot()
-        if diag.exec() == True:
-            topic, plotType, yRange, time_window, protocol = diag.getValues()
-            if plotType == "Line Plot":
-                plot = LinePlot(topic, yRange, time_window, protocol)
-                self.plotFrame.newTab(plot, topic)
-                self.device.deviceDataSig.connect(plot._updateData) # connect new plot to signal
-
+        diag.exec()
+       
     def newConsoleHandle(self):
-        if self.consoleFrame.checkMaxTabs():
-            log.error("Max Number of consoles reached")
-            return 
         diag = CreateConsole()
-        if diag.exec() == True:
-            topic = diag.getValues()
-            console = Console(topic=topic)
-            self.consoleFrame.newTab(console, topic)
-            self.device.deviceDataSig.connect(console._updateData)
-
+        diag.exec()
+    
     def sendCmdHandel(self):
-        text = self.controlFrame.commander.cmdEntry.text()
+        text = self.commander.cmdEntry.text()
         self.device.sendCmd(text)
 
-
-
-
-class TabFrame(QFrame):
-    def __init__(self, frameType : str, maxTabs : int):
-        super().__init__()
-        self.numTabs = 0
-        self.frameType = frameType
-        self.maxTabs = maxTabs
-        self.initUI()
-        self.connectSignals()
-
-    def initUI(self):
-        self.grid = QGridLayout()
-        self.setMinimumWidth = 400
-
-        self.tabs = QTabWidget()
-        self.initTabs()
-
-        self.newTabB = QPushButton(f"New {self.frameType}")
-        self.newTabB.setMaximumWidth(100)
-
-        self.grid.addWidget(self.tabs, 0,0,4,4)
-        self.grid.addWidget(self.newTabB, 4,0)
-
-        self.setLayout(self.grid)
-
-    def connectSignals(self):
-        self.tabs.currentChanged.connect(self.tabChangedHandle)
-    
-    def initTabs(self):
-        placeholder = QWidget()
-        self.tabs.addTab(placeholder, self.frameType)
-        self.numTabs = 0
-
-    def tabChangedHandle(self):
+    def settingsHandel(self):
         pass
 
-    def checkMaxTabs(self) -> bool:
-        return self.numTabs == self.maxTabs
-    
-    def newTab(self, tabWidget : QWidget, tabName : str):
-        if self.numTabs == 0:
-            self.tabs.removeTab(0)
-        idx = self.tabs.addTab(tabWidget, tabName)
-        self.numTabs +=1
-        self.tabs.setCurrentIndex(idx)
-
-
+    def connectionHandel(self):
+        pass
 
 
 
