@@ -21,28 +21,28 @@ class Console(QWidget):
         self.vBox.setContentsMargins(5, 5, 5, 5)
         self.setLayout(self.vBox)
 
-        self.console = QTextEdit()
-        self.console.setReadOnly(True)
-        self.console.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        self.console.setAcceptRichText(True)
-        self.console.setStyleSheet("background-color: black; color: green;")
+        self.consoleText = QTextEdit()
+        self.consoleText.setReadOnly(True)
+        self.consoleText.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.consoleText.setAcceptRichText(True)
+        self.consoleText.setStyleSheet("background-color: black; color: green;")
 
         # Add Widgets to Layout
-        self.vBox.addWidget(self.console)
+        self.vBox.addWidget(self.consoleText)
 
     def clearConsole(self):
         '''Clear Console'''
-        self.console.clear()
+        self.consoleText.clear()
 
     @QtCore.pyqtSlot(tuple) 
     def _updateData(self, msg : tuple[str, str]):
         '''Update Console with new data'''
         if(msg[0] != self.topic): # filter on topic
             return
-        if self.console.document().lineCount() > 200:
-            self.console.clear()
+        if self.consoleText.document().lineCount() > 200:
+            self.consoleText.clear()
 
-        self.console.append(msg[1]) # add data to console 
+        self.consoleText.append(msg[1]) # add data to console 
 
 
 
