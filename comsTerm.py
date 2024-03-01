@@ -31,7 +31,7 @@ def main():
     if args.serial:
         dataInterface = SerialDevice()
     elif args.simulated:
-        dataInterface = SimulatedDevice(0.01)
+        dataInterface = SimulatedDevice(0.1)
     else:
         print("Error: Please specify either --serial or --simulated")
         return

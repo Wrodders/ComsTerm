@@ -31,17 +31,16 @@ class SimulatedDevice(BaseDevice):
         }
     
     def start(self):
-        self.wThread.start()
+        self.workerIO._begin()
     
     def _run(self):
         '''Execute Thread'''
-        self._stopped = False
+        self.workerIO._stopped = False
         log.info("Started SimulatedInterface ")
-        while not self._stopped:
+        while not self.workerIO.isStopped():
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()
-                self.deviceDataSig.emit((topic, msg))
-                time.sleep(self.rate)        
+                self.deviceDataSig.emit((topic, msg))      
             except Exception as e:
                 log.error(f"Exception in Simulated Data :{e}")
                 break
@@ -54,6 +53,8 @@ class SimulatedDevice(BaseDevice):
             except Exception as e:
                 log.error(f"Exception in Simulated Cmd :{e}")
                 break
+
+            time.sleep(self.rate)  
 
         log.info("Exit Simulated Interface I/O Thread")
         return # exit thread

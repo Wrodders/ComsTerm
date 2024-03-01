@@ -17,6 +17,23 @@ from logger import getmylogger
 log = getmylogger(__name__)
 
 
+class Worker():
+    def __init__(self, runFunc) -> None:
+        self._stopped = True
+        self._mutex = QMutex()
+        self.wThread = threading.Thread(target=runFunc) # worker IO thread
+        
+    def isStopped(self) -> bool:
+        return self._stopped 
+    
+    def _begin(self):
+        self.wThread.start()
+
+    def _stop(self):
+        self._mutex.lock()
+        self._stopped = True
+        self._mutex.unlock()
+
 """
 @Brief: Base Class for a Device. Handles communications between device and ComsTerm.
 @Description:   Implements a set of CMDs and PUBs topics. Parses and Validates Commands against a devices protocols. 
@@ -27,9 +44,7 @@ class BaseDevice(QObject):
 
     def __init__(self):
         super().__init__()
-        self._stopped = True
-        self._mutex = QMutex()
-        self.wThread = threading.Thread(target=self._run) # worker IO thread
+        self.workerIO = Worker(self._run)
         self.cmdQueue = Queue() 
 
         # Create Base Topic Maps
@@ -82,89 +97,7 @@ class BaseDevice(QObject):
         raise NotImplementedError("Subclasses must implement start method")
     
     def stop(self):
-        self._mutex.lock()
-        self._stopped = True
-        self._mutex.unlock()
-
-
-
-
-"""
-ZMQ SOCKET INTERFACE FUNCTIONS
-
-"""    
-
-TRANSPORT_TYPES = ["inproc", "ipc", "tcp", "udp"]
-
-def checkAddress(transport : str, endpoint : str) -> str:
-    if transport == 'tcp':
-        # Example: tcp://127.0.0.1:5555
-        return f"{transport}://{endpoint}"
-    elif transport == 'ipc':
-        # Example: ipc:///tmp/zmq_socket
-        return f"{transport}:///tmp/{endpoint}"
-    elif transport == 'inproc':
-        # Example: inproc://example
-        return f"{transport}://{endpoint}"
-    else:
-        raise ValueError(f"Unsupported transport type: {transport}")   
-
-
-"""
-@Breif: ZMQ Publish socket with added functionality.
-"""
-class ZmqPub:
-    def __init__(self,transport : str, endpoint : str):
-        self.socketAddress = checkAddress(transport, endpoint)
-        self.context = zmq.Context.instance()
-        self.socket = self.context.socket(zmq.PUB)
-
-    def bind(self):
-        self.socket.bind(self.socketAddress)
-        log.debug(f"Binded ZMQ PUB socket to {self.socketAddress}")
-
-    def send(self, topic: str, data : str):
-        self.socket.send_multipart([topic.encode(), data.encode()])
-"""
-@Brief: ZMQ Subscription socket with added functionality.
-@Description: Creates a SUB Socket with add/remove topics, clean up and logging. 
-"""
-class ZmqSub:
-    def __init__(self, transport : str, address : str):
-        self.socketAddress = checkAddress(transport, address)
-        self.context = zmq.Context.instance()
-        self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        
-        self.topicList = []
-
-    def connect(self):
-        self.socket.connect(self.socketAddress)
-        log.debug(f"Connected ZMQ SUB socket to: {self.socketAddress}")
-
-    def addTopicSub(self, topic : str):
-        if topic not in self.topicList:
-            self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
-            self.topicList.append(topic)
-            log.debug(f"ZMQ SUB Subscribed to {topic}")
-
-    def removeTopic(self, topic : str):
-        self.socket.setsockopt(zmq.UNSUBSCRIBE, topic)
-        if topic in self.topicList:
-            self.topicList.remove(topic)
-            log.debug(f"Unsubscribed to {topic}")
-
-    def getTopics(self): # returns list of topic names the socket is subscribed
-        return self.topicList
-    
-    def receive(self) -> tuple[str, str]:
-        dataFrame = self.socket.recv_multipart()
-        return (dataFrame[0].decode(),dataFrame[1].decode())
-
-    def close(self):
-        self.socket.close()
-        log.debug(f"Closed ZMQ SUB socket connected to: {self.socketAddress}" )
-
+       self.workerIO._stop()
 
 
 ''' 
@@ -193,7 +126,6 @@ class MsgFrame():
     @classmethod
     def extractMsg(cls, msgPacket: str):
         # Extract SIZE ID DATA
-        print(msgPacket)
         match = re.match(r'<(.)(.):([^\x00]+)\x00\n', msgPacket) # this doesnt work
         if match:
             size = int(match.group(1))
