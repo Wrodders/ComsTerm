@@ -19,6 +19,7 @@
         "dataline",
         "Dfault",
         "Dockable",
+        "filtvel",
         "outputconsole",
         "serialutil"
     ]

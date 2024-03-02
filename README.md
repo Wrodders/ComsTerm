@@ -16,3 +16,6 @@ Once a Device Binds to the GUI it can send the ID command which returns the avai
 ### ViewPort
 Emmbeded simple graphical CLI tools like Plotter & VidStream into the GUI. 
 
+
+
+
