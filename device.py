@@ -20,7 +20,6 @@ log = getmylogger(__name__)
 
 @dataclass
 class MsgFrame():
-    size: int =  0
     ID: str = ""
     data: str = ""
 
@@ -69,15 +68,14 @@ class CmdMap:
 
 Handles communications through Messages delimited by a Packet defined as:
 
-|-------------Packet---------|
-|-----+-----+----+- - - +----|
-| SOF | LEN | ID | DATA | EOF|
-| 1   | 1   | 1  | ...  | 1  |
-|-----+-----+----+- - - +----|
-      |-------Frame-----|
+|-------Packet---------|
+|-----+----+- - - +----|
+| SOF | ID | DATA | EOF|
+| 1   | 1  | ...  | 1  |
+|-----+----+- - - +----|
+      |------Frame-----|
 
 SOF  -- Start of Frame  == '<'
-LEN  -- Size of Data (bytes)
 ID   --  Topic Identifier 
 DATA -- LEN bytes of data
 EOF  -- End of Frame == '\n'
@@ -171,6 +169,8 @@ class SimulatedDevice(BaseInterface):
         '''Execute Thread'''
         self._stopped = False
         log.info("Started SimulatedInterface ")
+        for topic in self.topicGenFuncMap.keys():
+            log.info(f"Publishing: {topic}")
         while not self._stopped:
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()
@@ -233,7 +233,7 @@ class SerialDevice(BaseInterface):
             log.error(f"No ports found for key: {key}")
             log.warning(f"Serial I/O Thread not started")
             return
-        elif self.connect(ports[0], 115200) == False:
+        elif self.connect(ports[0], 9600) == False:
             log.error(f"Failed to connect to{ports[0]}")
             log.warning(f"Serial I/O Thread not started")
             return
@@ -248,20 +248,18 @@ class SerialDevice(BaseInterface):
         while (not self._stopped) and self.port.is_open:
             try: 
                 # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
-                msgPacket = self.port.readline().decode('utf-8')
-                if msgPacket.startswith('<'): 
-                    recvMsg.size = int(msgPacket[1])
-                    recvMsg.ID = msgPacket[2]
-                    dataPart = msgPacket[3:]
-                    recvMsg.data = dataPart.join(char for char in dataPart if char.isprintable()) # remove null chars
-                    if len(recvMsg.data) > recvMsg.size:
-                        recvMsg.size = 0 # escape msg sequence
-                        continue # discard msg
-                    else:
+                msgPacket = self.port.readline().decode()
+                if len(msgPacket) > 0:
+                    if msgPacket[0] == '<': 
+                    
+                        recvMsg.ID = msgPacket[1]
+                        dataPart = msgPacket[2:]
+                        recvMsg.data = dataPart
+                        
                         self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
             except Exception as e:
                 log.error(f"Exception in Serial Read: {e}")
-                break 
+                pass
 
              #Service CmdMsg Queue And Transmit MsgFrame over Serial
             try:

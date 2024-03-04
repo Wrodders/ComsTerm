@@ -6,7 +6,7 @@ import sys, argparse
 
 from device import BaseInterface, SerialDevice, SimulatedDevice
 from plot import  CreatePlot, LinePlot
-from console import CreateConsole, Console, ControlFrame
+from console import CreateConsole, Console, CommandFrame
 from logger import getmylogger
 
 log = getmylogger(__name__)
@@ -36,7 +36,7 @@ class GUI(QWidget):
 
         #Create Widgets
         self.consoleFrame = TabFrame("Console", 4)
-        self.controlFrame = ControlFrame()
+        self.controlFrame = CommandFrame()
         self.plotFrame = TabFrame("Plot", 4)
 
         #create Splitters
@@ -56,7 +56,7 @@ class GUI(QWidget):
     def connectSignals(self):
         self.plotFrame.newTabB.clicked.connect(self.newPlotHandle)
         self.consoleFrame.newTabB.clicked.connect(self.newConsoleHandle)
-        self.controlFrame.commander.sendB.clicked.connect(self.sendCmdHandel)
+        self.controlFrame.sendB.clicked.connect(self.sendCmdHandel)
 
     def newPlotHandle(self):
         if self.plotFrame.checkMaxTabs():
@@ -82,7 +82,7 @@ class GUI(QWidget):
             self.device.deviceDataSig.connect(console._updateData)
 
     def sendCmdHandel(self):
-        text = self.controlFrame.commander.cmdEntry.text()
+        text = self.controlFrame.cmdEntry.text()
         self.device.sendCmd(text)
 
 

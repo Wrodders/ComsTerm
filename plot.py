@@ -48,11 +48,13 @@ class LinePlot(QWidget):
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg : tuple[str,str]):
        # Grabs msg data from the worker thread
-        if(msg[0] != self.topic): # filter on topic
+        topic, data = msg
+    
+        if(topic != self.topic): # filter on topic
             return
         try:
             for i, name in enumerate(self.protocol):
-                argData = float(msg[1].split(":")[i]) #get data for each argument in protocol
+                argData = float(data.split(":")[i]) #get data for each argument in protocol
                 self.dataSeries[name].append(argData)   
         except Exception as e:
            log.error(f"Exception in UpdateData:{e}")
