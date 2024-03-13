@@ -20,7 +20,11 @@
         "dataline",
         "Dfault",
         "Dockable",
+        "INPROC",
         "outputconsole",
-        "serialutil"
+        "requeiremtes",
+        "serialutil",
+        "unsub",
+        "zmqutils"
     ]
 }

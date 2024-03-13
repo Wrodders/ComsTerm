@@ -38,7 +38,7 @@ def main():
     
     app = QApplication(sys.argv)
     gui = GUI(dataInterface)
-    gui.show()
+   
 
     sys.exit(app.exec())
 

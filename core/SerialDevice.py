@@ -1,12 +1,11 @@
 import serial, serial.tools.list_ports
-from queue import Queue, Empty
+from queue import Empty
 
 from core.device import BaseDevice, MsgFrame
 from logger import getmylogger
 
 
 log = getmylogger(__name__)
-
 
 
 '''
@@ -21,7 +20,11 @@ class SerialDevice(BaseDevice):
         super().__init__()
         self.port = serial.Serial() # Data input
 
-    def start(self):
+    def _start(self):
+        """
+        @Brief: Connect to USB port being IO thread
+        @Description: Scans for usb ports and connects to the first one
+        """
         key = "usb"
         ports = self.scanUSB(key)
         if not ports :
@@ -33,49 +36,69 @@ class SerialDevice(BaseDevice):
             log.warning(f"Serial I/O Thread not started")
             return
 
-        self.wThread.start()  
+        self.workerIO._begin()  
         
-    # ********************** IO THREAD ************************* # 
+
     def _run(self):
-        self._stopped = False
+        """
+        @Brief: Serial IO Thread
+        """
         log.info("Started Serial Interface I/O Thread")
-        recvMsg =  MsgFrame()
-        while (not self._stopped) and self.port.is_open:
-            try: 
-                # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
-                msgPacket = self.port.readline()
-                #recvMsg = MsgFrame.extractMsg(msgPacket)
-                # HOT FIX BELOW
-                try:
-                    msg = msgPacket.decode('utf-8').rstrip("\n")
-                    msg = msg.replace('\x00','')
-                except UnicodeDecodeError as e:
-                    log.warning(f"{e}")
-                    continue
-                                
-                if msg != '':
-                    self.deviceDataSig.emit(("ODOM", msg)) # output Data
-
-            except Exception as e:
-                log.error(f"Exception in Serial Read: {e}")
-                break 
-
-             #Service CmdMsg Queue And Transmit MsgFrame over Serial
+    
+        while (not self.workerIO.stopEvent.is_set()) and self.port.is_open:
             try:
-                cmdPacket = self.cmdQueue.get_nowait()
-                self.port.write(cmdPacket) # output Data
-            except Empty:
-                pass
+                self.readDevice()
+                self.writeDevice()
             except Exception as e:
-                log.error(f"Exception in Serial Write: {e}")
+                log.error(f"Unexpected exception in thread loop: {e}")
                 break
 
         log.info('Exit Serial Interface I/O Thread')
         self.disconnect()
-        return # exit thread
     
+    def readDevice(self):
+        """
+        @Brief: Reads a message from a device, parses and publishes over its topic.
+        """
+        try: 
+            # Read ASCII Message
+            msgPacket = self.port.readline()
+            msg = msgPacket.decode('utf-8').rstrip("\n")
+            msg = msg.replace('\x00','')
+            if len(msg) <= 0:
+                return
+            #Decode Message
+            recvMsg = MsgFrame.extractMsg(msg)        
+            print(recvMsg)
+            topic = self.pubMap.getNameByID(recvMsg.ID)
+            if topic != "":  
+                #print(f"TP: {topic}", recvMsg.data)
+                self.publisher.send(topic, recvMsg.data) # Output Message
 
-    # Public Functions
+        except UnicodeDecodeError as e:
+            log.warning(f"{e}")
+            return 
+        except Exception as e:
+            log.error(f"Exception in Serial Read: {e}")
+            raise 
+
+    def writeDevice(self):
+        """
+        @Brief: Writes cmds from the queue to the device.
+        """
+        #Service CmdMsg Queue And Transmit MsgFrame over Serial
+        try:
+            cmdPacket = self.cmdQueue.get_nowait()
+            self.port.write(cmdPacket) # output Data
+        except Empty:
+            pass
+        except Exception as e:
+            log.error(f"Exception in Serial Write: {e}")
+            raise
+
+    """
+    ************** PUBLIC FUNCTIONS *************************
+    """
     def scanUSB(self, key: str) -> list:
         ports = [p.device for p in serial.tools.list_ports.comports() if key.lower() in p.device]
         return ports
@@ -90,7 +113,6 @@ class SerialDevice(BaseDevice):
         self.port.port = portNum
         self.port.baudrate = baud
         self.port.timeout = 0.1
-        self.port.xonxoff = 1
         try:
             self.port.open()
         except serial.SerialException as e:
@@ -100,7 +122,7 @@ class SerialDevice(BaseDevice):
             log.info(f'Connection to {portNum} Successful')
             return True
     
-    def disconnect(self):
+    def disconnect(self) -> bool:
         '''Disconnect from serial device'''
         if self.port.is_open == False:
             log.warning("Disconnect Error: Serial Port Is Already Closed")

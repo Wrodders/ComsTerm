@@ -8,7 +8,7 @@ import matplotlib.animation as animation
 
 
 from core.device import TopicMap, Worker
-from core.ZmqDevice import ZmqSub, Transport
+from core.ZmqDevice import ZmqSub, Transport, Endpoint
 from logger import getmylogger
 
 from collections import deque , defaultdict
@@ -30,7 +30,7 @@ class PlotBase(QFrame):
     def __init__(self):
         super().__init__()
         self.workerIO = Worker(self._run)
-        self.sub = ZmqSub(Transport.IPC, "COMSTERM" )
+        self.sub = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
         self.dataSeries = defaultdict(deque)
 
     def _run(self):
@@ -209,4 +209,3 @@ class CreatePlot(QDialog):
 
     def validateInput(self):
         pass
-        

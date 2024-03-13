@@ -1,6 +1,5 @@
-import random,time, lorem
-from queue import Queue, Empty
-
+import random, time, lorem
+from queue import Empty
 
 from logger import getmylogger
 from core.device import BaseDevice
@@ -30,17 +29,16 @@ class SimulatedDevice(BaseDevice):
             'ACCEL' : self._generate_accel_data,
         }
     
-    def start(self):
+    def _start(self):
         self.workerIO._begin()
     
     def _run(self):
         '''Execute Thread'''
-        self.workerIO._stopped = False
-        log.info("Started SimulatedInterface ")
-        while not self.workerIO.isStopped():
+        log.info("Started Simulated Device ")
+        while not self.workerIO.stopEvent.is_set():
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()
-                self.deviceDataSig.emit((topic, msg))      
+                self.publisher.send(topic, msg)      
             except Exception as e:
                 log.error(f"Exception in Simulated Data :{e}")
                 break

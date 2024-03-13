@@ -13,7 +13,9 @@ from PyQt6.QtWidgets import *
 from core.device import BaseDevice
 
 from client.plot import  CreatePlot, LinePlot
-from client.console import CreateConsole, Console, ControlFrame, Commander
+from client.console import CreateConsole, Console
+from client.commander import Commander
+from client.menues import ConnectionsDialog
 from logger import getmylogger
 
 log = getmylogger(__name__)
@@ -23,16 +25,20 @@ class GUI(QWidget):
     def __init__(self, deviceInterface:BaseDevice):
         super().__init__()
 
-        self.setWindowTitle("ComsTermV4")
+        self.setWindowTitle("ComsTermV5")
         self.device = deviceInterface
-        self.device.start() # Begin Device Server
+        self.device._start() # Begin Device Server
+
+        self.windows = list()
+        self.devices = list()
 
         self.initUI()
         self.connectSignals()
+        self.show()
 
     def closeEvent(self, event):
         log.info("Closing GUI")
-        self.device.stop() # stop thread
+        self.device._stop() # stop device thread
         event.accept()
     def initUI(self): 
         self.setGeometry(100,100, 300, 300)
@@ -42,7 +48,6 @@ class GUI(QWidget):
         self.setLayout(self.grid)
 
         #Create Widgets
-
         self.settingsB = QPushButton("Settings")
         self.settingsB.setMaximumWidth(100)
         self.connectionB = QPushButton("Connections")
@@ -51,8 +56,8 @@ class GUI(QWidget):
         self.newConsoleB.setMaximumWidth(100)
         self.newPlotB = QPushButton("New Plot")
         self.newPlotB.setMaximumWidth(100)
-
         self.commander = Commander()
+
         # Add to Layout
         self.grid.addWidget(self.settingsB, 0,0)
         self.grid.addWidget(self.connectionB, 0,1)
@@ -62,6 +67,7 @@ class GUI(QWidget):
         
         
     def connectSignals(self):
+        # Connect GUI Buttons
         self.newPlotB.clicked.connect(self.newPlotHandle)
         self.newConsoleB.clicked.connect(self.newConsoleHandle)
         self.commander.sendB.clicked.connect(self.sendCmdHandel)
@@ -74,7 +80,10 @@ class GUI(QWidget):
        
     def newConsoleHandle(self):
         diag = CreateConsole()
-        diag.exec()
+        if diag.exec() == True:
+            console = Console(topic=diag.getValues())
+            self.windows.append(console)
+            console.show()
     
     def sendCmdHandel(self):
         text = self.commander.cmdEntry.text()
@@ -84,4 +93,9 @@ class GUI(QWidget):
         pass
 
     def connectionHandel(self):
-        pass
+        diag = ConnectionsDialog()
+        if diag.exec() == True:
+            pass
+
+
+
