@@ -18,6 +18,10 @@ class Console(QWidget):
         self.initUI()  
 
         self.zmqBridge = ZmqBridgeQt()
+        self.zmqBridge.subscriber.addTopicSub(topic)
+        self.zmqBridge.msgSig.connect(self._updateData)
+        self.zmqBridge.workerIO._begin()
+        
 
     def initUI(self):
         self.setMinimumWidth(300)
@@ -43,6 +47,7 @@ class Console(QWidget):
     @QtCore.pyqtSlot(tuple) 
     def _updateData(self, msg : tuple[str, str]):
         '''Update Console with new data'''
+        print(msg)
         if(msg[0] != self.topic): # filter on topic
             return
         if self.consoleText.document().lineCount() > 200:

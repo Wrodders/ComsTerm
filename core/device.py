@@ -38,12 +38,15 @@ class BaseDevice():
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
 
-        self.cmdMap.registerTopic(topicID = '0', topicName="ID", topicFmt="", delim="")
-        self.cmdMap.registerTopic(topicID = '1', topicName="RESET", topicFmt="d:d", delim=":")
+        self.cmdMap.registerTopic(topicID = 'a', topicName="ID", topicFmt="", delim="")
+        self.cmdMap.registerTopic(topicID = 'b', topicName="RESET", topicFmt="d:d", delim=":")
 
-        self.pubMap.registerTopic(topicID = '0', topicName="CMD_RET", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = '1', topicName="ERR", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = '2', topicName="INFO", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'b', topicName="ERR", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicFmt="s", delim="")
+
+        topics = self.pubMap.getAllTopics()
+        print(topics)
 
 
     def parseCmd(self, text: str) -> str:

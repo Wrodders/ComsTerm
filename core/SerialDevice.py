@@ -69,10 +69,10 @@ class SerialDevice(BaseDevice):
                 return
             #Decode Message
             recvMsg = MsgFrame.extractMsg(msg)        
-            print(recvMsg)
+            
             topic = self.pubMap.getNameByID(recvMsg.ID)
             if topic != "":  
-                #print(f"TP: {topic}", recvMsg.data)
+                print(f"TP: {topic}", recvMsg.data)
                 self.publisher.send(topic, recvMsg.data) # Output Message
 
         except UnicodeDecodeError as e:

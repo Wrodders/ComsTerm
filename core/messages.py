@@ -59,15 +59,17 @@ class TopicMap:
         return topic.fmt if topic else ""
 
     def getNameByID(self, ID: str) -> str:
+        
         topic = self.topics.get(ID)
+    
         return topic.name if topic else ""
     
     def getIDByName(self, name:str) -> str:
         topic = self.topics.get(name)
         return topic.ID if topic else ""
 
-    def getAllTopics(self) -> List[Tuple[str, str, int]]:
-        return [(topic.name, topic.fmt, topic.nArgs) for topic in self.topics.values()]
+    def getAllTopics(self) -> List[Tuple[str, str,  str, int]]:
+        return [(topic.name, topic.ID, topic.fmt, topic.nArgs) for topic in self.topics.values()]
 
     def registerTopic(self, topicID : str, topicName: str, topicFmt: str, delim: str):
         if delim != "":
@@ -76,3 +78,5 @@ class TopicMap:
             numArgs = 0
         newTopic = Topic(ID=topicID, name=topicName, fmt=topicFmt, delim=delim, nArgs= numArgs)
         self.topics[newTopic.name] = newTopic
+        self.topics[newTopic.ID] = newTopic
+    
