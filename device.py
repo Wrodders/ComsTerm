@@ -416,8 +416,7 @@ class ZmqDevice(BaseInterface):
                 recvMsg = MsgFrame.parse_packet(msgPacket.decode())
 
                 if recvMsg.ID:
-                    topic=topic.decode()
-                    print(topic, recvMsg.data)
+                    topic=topic.decode() + '/' + recvMsg.ID
                     self.deviceDataSig.emit((topic, recvMsg.data))
             except Exception as e:
                 log.error(f"Exception in ZmqQTSignal:{e} ")
