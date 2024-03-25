@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import *
 
 import sys, argparse
 
-from device import BaseInterface, SerialDevice, SimulatedDevice
+from device import BaseInterface, SerialDevice, SimulatedDevice, ZmqDevice
 from plot import  CreatePlot, LinePlot
 from console import CreateConsole, Console, CommandFrame
 from logger import getmylogger
@@ -145,7 +145,7 @@ def parse_command_line_args():
     parser = argparse.ArgumentParser(description="GUI application with different data receivers")
     parser.add_argument('--serial', action='store_true', help='Use serial interface')
     parser.add_argument('--simulated', action='store_true', help='Use simulated interface')
-    #parser.add_argument('--zmq', action='store_true', help='Use zmq interface')
+    parser.add_argument('--zmq', action='store_true', help='Use zmq interface')
     return parser.parse_args()
 
 def main():
@@ -156,6 +156,8 @@ def main():
         dataInterface = SerialDevice()
     elif args.simulated:
         dataInterface = SimulatedDevice(0.01)
+    elif args.zmq:
+        dataInterface = ZmqDevice("tcp", "piStream.local:5555")
     else:
         print("Error: Please specify either --serial or --simulated")
         return

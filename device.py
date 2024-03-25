@@ -23,6 +23,13 @@ class MsgFrame():
     ID: str = ""
     data: str = ""
 
+    @classmethod
+    def parse_packet(cls, packet):
+        if packet[0] == '<':
+            return cls(ID=packet[1], data=packet[2:])
+        else:
+            return cls()
+
 @dataclass
 class Cmd():
     ID : str = ""
@@ -233,7 +240,7 @@ class SerialDevice(BaseInterface):
             log.error(f"No ports found for key: {key}")
             log.warning(f"Serial I/O Thread not started")
             return
-        elif self.connect(ports[0], 9600) == False:
+        elif self.connect(ports[0], 115200) == False:
             log.error(f"Failed to connect to{ports[0]}")
             log.warning(f"Serial I/O Thread not started")
             return
@@ -244,19 +251,14 @@ class SerialDevice(BaseInterface):
     def _run(self):
         self._stopped = False
         log.info("Started Serial Interface I/O Thread")
-        recvMsg =  MsgFrame()
         while (not self._stopped) and self.port.is_open:
             try: 
                 # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
-                msgPacket = self.port.readline().decode()
-                if len(msgPacket) > 0:
-                    if msgPacket[0] == '<': 
-                    
-                        recvMsg.ID = msgPacket[1]
-                        dataPart = msgPacket[2:]
-                        recvMsg.data = dataPart
-                        
-                        self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
+                msgPacket = self.port.readline()
+                recvMsg = MsgFrame.parse_packet(msgPacket)
+                if recvMsg.ID:
+                    self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
+                                               
             except Exception as e:
                 log.error(f"Exception in Serial Read: {e}")
                 pass
@@ -315,7 +317,23 @@ class SerialDevice(BaseInterface):
             log.info('Serial Port Closed')
             return True
         
-    
+
+
+
+TRANSPORT_TYPES = ["inproc", "ipc", "tcp", "udp"]
+
+def checkAddress(transport : str, endpoint : str) -> str:
+    if transport == 'tcp':
+        # Example: tcp://127.0.0.1:5555
+        return f"{transport}://{endpoint}"
+    elif transport == 'ipc':
+        # Example: ipc:///tmp/zmq_socket
+        return f"{transport}:///tmp/{endpoint}"
+    elif transport == 'inproc':
+        # Example: inproc://example
+        return f"{transport}://{endpoint}"
+    else:
+        raise ValueError(f"Unsupported transport type: {transport}")
 
 """
 @Breif: ZMQ Publish socket with added functionality.
@@ -376,10 +394,11 @@ class ZmqSub:
 @Breif: WIP
 """
 class ZmqDevice(BaseInterface):
-    def __init__(self, socketAddress : str ): 
+    def __init__(self, transport : str, socketAddress : str ): 
         super().__init__()
         self.thread = threading.Thread(target=self._run)
         self.socketAddr = socketAddress
+        self.transport  = transport
         
     def start(self):
         self.thread.start()
@@ -387,14 +406,19 @@ class ZmqDevice(BaseInterface):
     def _run(self):
         '''Execute Thread'''
         self._stopped = False
-        self.sub  = ZmqSub(transport="ipc", address=self.socketAddr)
+        self.sub  = ZmqSub(transport=self.transport, address=self.socketAddr)
         self.sub.connect()
         self.sub.addTopicSub("") # recevies only data sent on the GUI topic
         log.info(f"Started ZMQ Interface")
         while not self._stopped:
             try:
-                msg = self.sub.socket.recv_multipart()
-                #self.socketDataSig.emit((topic, msg))
+                topic, msgPacket = self.sub.socket.recv_multipart()
+                recvMsg = MsgFrame.parse_packet(msgPacket.decode())
+
+                if recvMsg.ID:
+                    topic=topic.decode()
+                    print(topic, recvMsg.data)
+                    self.deviceDataSig.emit((topic, recvMsg.data))
             except Exception as e:
                 log.error(f"Exception in ZmqQTSignal:{e} ")
                 break
@@ -403,18 +427,3 @@ class ZmqDevice(BaseInterface):
         log.info("exit Zmq Bridge QT I/O Thread")  
         return
     
-
-TRANSPORT_TYPES = ["inproc", "ipc", "tcp", "udp"]
-
-def checkAddress(transport : str, endpoint : str) -> str:
-    if transport == 'tcp':
-        # Example: tcp://127.0.0.1:5555
-        return f"{transport}://{endpoint}"
-    elif transport == 'ipc':
-        # Example: ipc:///tmp/zmq_socket
-        return f"{transport}:///tmp/{endpoint}"
-    elif transport == 'inproc':
-        # Example: inproc://example
-        return f"{transport}://{endpoint}"
-    else:
-        raise ValueError(f"Unsupported transport type: {transport}")

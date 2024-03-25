@@ -1,0 +1,1 @@
+2024-03-25 17:40:30,564~ERROR~Exception in ZmqQTSignal:wrapped C/C++ object of type ZmqDevice has been deleted ~module:device~function:device
