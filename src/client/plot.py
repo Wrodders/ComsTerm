@@ -15,8 +15,6 @@ from collections import deque , defaultdict
 
 plt.style.use('dark_background')
 
-
-
 """     
 Plot:   Subscribes to topics publishing data over ZMQ. 
         Topic Data pushed to thread safe ring buffer to be polled by main GUI loop.
@@ -25,7 +23,9 @@ Plot:   Subscribes to topics publishing data over ZMQ.
 """
 
 class BasePlot(QFrame):
+    """Base class for plotting."""
     def __init__(self):
+        """Constructor method for BasePlot class."""
         super().__init__()
         self.log = getmylogger(__name__)
         self.workerIO = Worker(self._run)
@@ -43,7 +43,9 @@ class BasePlot(QFrame):
 
 
 class LinePlot(BasePlot):
-    def __init__(self,yrange: tuple[float, float], xrange:int, protocol :str ):
+    """Class for line plotting."""
+    def __init__(self, yrange: tuple[float, float], xrange: int, protocol: list[str]):
+        """Constructor method for LinePlot class."""
         super().__init__()
 
         self.initUI()
@@ -60,9 +62,8 @@ class LinePlot(BasePlot):
 
         self.dataSet = {}
 
-       
         # Initialize the plot
-        self.xs = list(range(0,self.x_len)) # time series (x-axis)
+        self.xs = list(range(0, self.x_len)) # time series (x-axis)
         self.ax.set_ylim(self.y_range) 
 
         for label in self.protocol:
@@ -71,52 +72,58 @@ class LinePlot(BasePlot):
             self.lines.append(line)
         self.ax.legend(loc=1)
         # matplotlib timer animation
-        self.animation =  animation.FuncAnimation(self.fig,self.animate,fargs=(self.lines,),interval=200,blit=False,cache_frame_data=False)
-
+        self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), interval=200, blit=False, cache_frame_data=False)
 
     def initUI(self):
+        """Initializes the user interface."""
         self.canvas = FigureCanvas(self.fig)
         self.settingsB = QPushButton("Plot Settings")
         self.cursorsB = QPushButton("Cursors")
         self.cursorsB.setCheckable(True)
-        self.clearB  = QPushButton("Clear")
+        self.clearB = QPushButton("Clear")
         self.recordB = QPushButton("Start Record")
         self.recordB.setCheckable(True)
         self.filterB = QPushButton("Filters")
 
         layout = QGridLayout()
-        layout.addWidget(self.settingsB, 0,0)
-        layout.addWidget(self.cursorsB, 0,1)
-        layout.addWidget(self.clearB, 0,2)
-        layout.addWidget(self.recordB, 0,3)
-        layout.addWidget(self.filterB, 0,4)
-        layout.addWidget(self.canvas, 1, 0, 5,5)
+        layout.addWidget(self.settingsB, 0, 0)
+        layout.addWidget(self.cursorsB, 0, 1)
+        layout.addWidget(self.clearB, 0, 2)
+        layout.addWidget(self.recordB, 0, 3)
+        layout.addWidget(self.filterB, 0, 4)
+        layout.addWidget(self.canvas, 1, 0, 5, 5)
         self.setLayout(layout)
-        self.setContentsMargins(0,0,0,0)
+        self.setContentsMargins(0, 0, 0, 0)
         self.setMinimumSize(300, 300)
 
     def connectSignals(self):
-        self.settingsB.clicked.connect(self.settingsHandel)
+        """Connects signals to slots."""
+        self.settingsB.clicked.connect(self.settingsHandle)
 
 
-    def settingsHandel(self):
+    def settingsHandle(self):
+        """Handles opening settings."""
         pass
 
-    def cursorsHandel(self):
+    def cursorsHandle(self):
+        """Handles cursor actions."""
         pass
 
-    def clearHandel(self):
+    def clearHandle(self):
+        """Handles clearing the plot."""
         pass
 
-    def recordHandel(self):
+    def recordHandle(self):
+        """Handles recording."""
         pass
 
-    def filterHandel(self):
+    def filterHandle(self):
+        """Handles filtering."""
         pass
 
 
     @QtCore.pyqtSlot(tuple)
-    def _updateData(self, msg : tuple[str,str]):
+    def _updateData(self, msg: tuple[str, str]):
        # Grabs msg data from the worker thread
         topic, data = msg
 
@@ -136,19 +143,20 @@ class LinePlot(BasePlot):
         return lines
 
 
-
-
 class CreatePlot(QDialog):
+    """Dialog for creating a new plot."""
     def __init__(self):
+        """Constructor method for CreatePlot class."""
         super().__init__()
         self.initUI()
 
         self.maxDataSeries = 8
 
     def initUI(self):
+        """Initializes the user interface."""
         self.log = getmylogger(__name__)
         self.setWindowTitle("New Plot")
-        self.setMinimumSize(600,300)
+        self.setMinimumSize(600, 300)
 
         self.seriesInfo = defaultdict(dict) # holds the info about the requested topic data series to plot
         self.plotCombo = QComboBox()
@@ -161,7 +169,6 @@ class CreatePlot(QDialog):
         self.saveConfigB = QPushButton("Save Plot Config")
         self.saveConfigB.setMaximumWidth(200)
 
-
         hBox = QHBoxLayout()
         hBox.addWidget(self.plotCombo)
         hBox.addWidget(self.newSeriesB)
@@ -169,7 +176,6 @@ class CreatePlot(QDialog):
         self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["Topic Path", "Series Name", "Data Type", "Color", ""])
-
 
         # Dialogue Accept
         QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel 
@@ -184,8 +190,8 @@ class CreatePlot(QDialog):
         vBox.addWidget(self.buttonBox)
         self.setLayout(vBox)
 
-
     def newSeriesHandle(self):
+        """Handles adding a new data series."""
         rowCount = self.table.rowCount()
         if rowCount >= self.maxDataSeries:
             self.log.error(f"Max number of Data Series per plot is {self.maxDataSeries}")
@@ -203,8 +209,9 @@ class CreatePlot(QDialog):
         self.table.setCellWidget(rowCount, 4, removeB)
 
     def removeSeries(self, row):
+        """Removes a data series."""
         self.table.removeRow(row)
 
-
     def validateInput(self):
+        """Validates user input."""
         pass

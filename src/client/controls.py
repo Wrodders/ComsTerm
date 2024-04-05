@@ -3,12 +3,16 @@ from PyQt6.QtWidgets import QApplication, QWidget, QDial, QSlider, QLabel, QGrid
 from PyQt6.QtCore import Qt
 
 class Controls(QWidget):
+    """Widget representing control panel with sliders and dials."""
+    
     def __init__(self):
+        """Constructor method for Controls class."""
         super().__init__()
 
         self.initUI()
 
     def initUI(self):
+        """Initializes the user interface."""
         self.setFixedSize(500, 300)
 
         # Splitter with Frames
@@ -35,14 +39,19 @@ class Controls(QWidget):
 
 
     def configure(self):
+        """Opens configuration dialog."""
         pass
 
 class SlidersFrame(QFrame):
+    """Widget representing frame with sliders."""
+    
     def __init__(self):
+        """Constructor method for SlidersFrame class."""
         super().__init__()
         self.initUI()
 
     def initUI(self):
+        """Initializes the user interface."""
         layout = QVBoxLayout()
 
         # Sliders
@@ -75,14 +84,19 @@ class SlidersFrame(QFrame):
         self.setLayout(layout)
 
     def updateLabel(self, label, value):
+        """Updates label text with slider value."""
         label.setText(f"{label.text().split(':')[0]}: {value}")
 
 class DialsFrame(QFrame):
+    """Widget representing frame with dials."""
+    
     def __init__(self):
+        """Constructor method for DialsFrame class."""
         super().__init__()
         self.initUI()
 
     def initUI(self):
+        """Initializes the user interface."""
         layout = QVBoxLayout()
 
         # Dials
@@ -108,10 +122,12 @@ class DialsFrame(QFrame):
         self.setLayout(layout)
 
     def updateLabel(self, label, value):
+        """Updates label text with dial value."""
         label.setText(f"{label.text().split(':')[0]}: {value}")
 
 
 def main():
+    """Main function to launch the application."""
     app = QApplication(sys.argv)
     controls = Controls()
     controls.show()

@@ -1,10 +1,12 @@
-
 from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 class ConnectionsDialog(QDialog):
+    """Dialog for managing connection settings."""
+
     def __init__(self):
+        """Constructor method for ConnectionsDialog class."""
         super().__init__()
 
         self.setWindowTitle("Connection Settings")
@@ -44,6 +46,7 @@ class ConnectionsDialog(QDialog):
         self.setLayout(self.vBox)
 
     def addConnection(self):
+        """Adds a new connection to the table."""
         method = self.connectionMethodCombo.currentText()
         devicePath = "/path/to/device"  # Replace with actual device path
         status = "Connected"  # Assume connected for simplicity
@@ -55,8 +58,9 @@ class ConnectionsDialog(QDialog):
 
 
     def connectDevice(self):
+        """Connects the selected device."""
         method = self.connectionMethodCombo.currentText()
-        if method == "serial":
+        if method == "Serial":
             serial_device = SerialDevice()
             try:
                 devices = serial_device.scan()
@@ -74,6 +78,7 @@ class ConnectionsDialog(QDialog):
 
 
     def disconnectConnection(self):
+        """Disconnects the selected connection."""
         selectedRow = self.table.currentRow()
         if selectedRow != -1:
             self.table.removeRow(selectedRow)

@@ -7,31 +7,44 @@ from core.zmqutils import ZmqBridgeQt
 from common.logger import getmylogger
 
 
-class Console(QWidget):    
-    def __init__(self, topic : str, parent=None):
+class Console(QWidget):
+    """Widget representing a console for displaying messages."""
+
+    def __init__(self, topic: str, parent=None):
+        """Constructor method for Console class.
+
+        Args:
+            topic (str): The topic of the console.
+            parent (QWidget, optional): The parent widget. Defaults to None.
+        """
         super(Console, self).__init__(parent)
 
         self.log = getmylogger(__name__)
 
-        self.setGeometry(100,100,300,300)
+        self.setGeometry(100, 100, 300, 300)
         self.topic = topic
         self.setWindowTitle(topic)
-        self.initUI()  
+        self.initUI()
         self.log.debug(f"Opened Console {self.topic}")
         self.zmqBridge = ZmqBridgeQt()
-        #self.zmqBridge.subscriber.addTopicSub(topic)
+        # self.zmqBridge.subscriber.addTopicSub(topic)
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
-    
+
     def closeEvent(self, event):
+        """Event handler for closing the console.
+
+        Args:
+            event (QCloseEvent): The close event.
+        """
         self.log.debug(f"Closing Console {self.topic}")
-        self.zmqBridge.workerIO._stop() # stop device thread
+        self.zmqBridge.workerIO._stop()  # stop device thread
         event.accept()
-        
 
     def initUI(self):
+        """Initializes the user interface."""
         self.setMinimumWidth(300)
-        # Create  Layout
+        # Create Layout
         self.vBox = QVBoxLayout()
         self.vBox.setContentsMargins(5, 5, 5, 5)
         self.setLayout(self.vBox)
@@ -45,25 +58,31 @@ class Console(QWidget):
         # Add Widgets to Layout
         self.vBox.addWidget(self.consoleText)
 
-
     def clearConsole(self):
-        '''Clear Console'''
+        """Clears the console."""
         self.consoleText.clear()
 
-    @QtCore.pyqtSlot(tuple) 
-    def _updateData(self, msg : tuple[str, str]):
-        '''Update Console with new data'''
+    @QtCore.pyqtSlot(tuple)
+    def _updateData(self, msg: tuple[str, str]):
+        """Updates the console with new data.
+
+        Args:
+            msg (tuple[str, str]): The message tuple containing topic and data.
+        """
         topic, data = msg
-        if(topic != self.topic): # filter on topic
+        if topic != self.topic:  # filter on topic
             return
         if self.consoleText.document().lineCount() > 200:
             self.consoleText.clear()
 
-        self.consoleText.append(data) # add data to console 
+        self.consoleText.append(data)  # add data to console
 
 
 class CreateConsole(QDialog):
+    """Dialog for creating a new console."""
+
     def __init__(self):
+        """Constructor method for CreateConsole class."""
         super().__init__()
 
         self.log = getmylogger(__name__)
@@ -75,7 +94,10 @@ class CreateConsole(QDialog):
         form = QFormLayout()
         form.addRow(topicLabel, self.consoleTopic)
 
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.validateInput)
         self.buttonBox.rejected.connect(self.reject)
@@ -84,18 +106,24 @@ class CreateConsole(QDialog):
         vBox.addWidget(self.buttonBox)
         self.setLayout(vBox)
 
-
     def validateInput(self):
+        """Validates the user input."""
         if self.consoleTopic.text() == "":
-            errMsg = QMessageBox.critical(self, "Error", "All Fields are Mandatory")
+            errMsg = QMessageBox.critical(
+                self, "Error", "All Fields are Mandatory"
+            )
             return
         self.accept()
 
     def getValues(self) -> str:
+        """Returns the value entered in the console topic field.
+
+        Returns:
+            str: The topic entered in the console topic field.
+        """
         try:
             topic = self.consoleTopic.text()
         except ValueError as e:
             self.log.error(f"Error in getValues {e}")
 
         return str(topic)
-
