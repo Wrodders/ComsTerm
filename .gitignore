@@ -1,5 +1,5 @@
 .vscode
 .python-version
 __pycache__
-
+site/*
 *.log
