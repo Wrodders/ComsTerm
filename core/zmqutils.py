@@ -2,14 +2,14 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-import zmq
+import zmq, time
 from enum import Enum
 
 from common.worker import Worker
 
 
-from logger import getmylogger
-log = getmylogger(__name__)
+from common.logger import getmylogger
+
 
 
 """
@@ -47,13 +47,14 @@ def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
 """
 class ZmqPub:
     def __init__(self,transport : Transport, endpoint : Endpoint):
+        self.log = getmylogger(__name__)
         self.socketAddress = checkAddress(transport, endpoint)
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.PUB)
 
     def bind(self):
         self.socket.bind(self.socketAddress)
-        log.debug(f"Binded ZMQ PUB socket to {self.socketAddress}")
+        self.log.debug(f"Binded ZMQ PUB socket to {self.socketAddress}")
 
     def send(self, topic: str, data : str):
         self.socket.send_multipart([topic.encode(), data.encode()])
@@ -63,39 +64,45 @@ class ZmqPub:
 """
 class ZmqSub:
     def __init__(self, transport : Transport, endpoint : Endpoint):
+        self.log = getmylogger(__name__)
         self.socketEndpoint = checkAddress(transport, endpoint)
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        
         self.topicList = []
 
     def connect(self):
         self.socket.connect(self.socketEndpoint)
-        log.debug(f"Connected ZMQ SUB socket to: {self.socketEndpoint}")
+        self.log.debug(f"Connected ZMQ SUB socket to: {self.socketEndpoint}")
 
     def addTopicSub(self, topic : str):
         if topic not in self.topicList:
             self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
             self.topicList.append(topic)
-            log.debug(f"ZMQ SUB Subscribed to {topic}")
+            self.log.debug(f"ZMQ SUB Subscribed to {topic}")
 
     def removeTopic(self, topic : str):
         self.socket.setsockopt(zmq.UNSUBSCRIBE, topic)
         if topic in self.topicList:
             self.topicList.remove(topic)
-            log.debug(f"Unsubscribed to {topic}")
+            self.log.debug(f"Unsubscribed to {topic}")
 
     def getTopics(self): # returns list of topic names the socket is subscribed
         return self.topicList
     
     def receive(self) -> tuple[str, str]:
-        dataFrame = self.socket.recv_multipart()
-        return (dataFrame[0].decode(),dataFrame[1].decode())
+        try:
+            dataFrame = self.socket.recv_multipart(flags=zmq.NOBLOCK)
+            return (dataFrame[0].decode(),dataFrame[1].decode())
+        except zmq.Again:
+            # No message received, continue loop
+            return ("","")
+        except Exception as e:
+            self.log.error(f"Excpetion in ZMQSUB Receive: {e}")
+            return ("","")
 
     def close(self):
         self.socket.close()
-        log.debug(f"Closed ZMQ SUB socket connected to: {self.socketEndpoint}" )
+        self.log.debug(f"Closed ZMQ SUB socket connected to: {self.socketEndpoint}" )
 
 
 """
@@ -106,24 +113,28 @@ class ZmqBridgeQt(QObject):
     msgSig = pyqtSignal(tuple)
     def __init__(self):
         super().__init__()
+        self.log = getmylogger(__name__)
+        
         self.workerIO = Worker(self._run)
-        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
+        
        
     def _run(self):
-        log.info(f"Started ZmqBridge I/O Thread")
+        self.log.info(f"Started ZmqBridge I/O Thread")
+        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
+        self.subscriber.addTopicSub("")
+        
         self.subscriber.connect()
         
         while not self.workerIO.stopEvent.is_set():
             try:
-
                 topic, msg = self.subscriber.receive()
-                self.msgSig.emit(topic,msg)
+                self.msgSig.emit((topic,msg))
                 
             except Exception as e:
-                log.error(f"Exception in ZmqBridgeQt {e}")
+                self.log.error(f"Exception in ZmqBridgeQt {e}")
                 break
         
-            self.subscriber.close()
-            log.info("Exiting ZmqBridge I/O Thread")
+        self.subscriber.close()
+        self.log.info("Exiting ZmqBridge I/O Thread")
                 
         

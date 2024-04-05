@@ -4,23 +4,29 @@ from PyQt6.QtWidgets import *
 
 from core.zmqutils import ZmqBridgeQt
 
-from logger import getmylogger
-
-log = getmylogger(__name__)
+from common.logger import getmylogger
 
 
 class Console(QWidget):    
     def __init__(self, topic : str, parent=None):
         super(Console, self).__init__(parent)
+
+        self.log = getmylogger(__name__)
+
         self.setGeometry(100,100,300,300)
         self.topic = topic
         self.setWindowTitle(topic)
         self.initUI()  
-
+        self.log.debug(f"Opened Console {self.topic}")
         self.zmqBridge = ZmqBridgeQt()
-        self.zmqBridge.subscriber.addTopicSub(topic)
+        #self.zmqBridge.subscriber.addTopicSub(topic)
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
+    
+    def closeEvent(self, event):
+        self.log.debug(f"Closing Console {self.topic}")
+        self.zmqBridge.workerIO._stop() # stop device thread
+        event.accept()
         
 
     def initUI(self):
@@ -47,18 +53,21 @@ class Console(QWidget):
     @QtCore.pyqtSlot(tuple) 
     def _updateData(self, msg : tuple[str, str]):
         '''Update Console with new data'''
-        print(msg)
-        if(msg[0] != self.topic): # filter on topic
+        topic, data = msg
+        if(topic != self.topic): # filter on topic
             return
         if self.consoleText.document().lineCount() > 200:
             self.consoleText.clear()
 
-        self.consoleText.append(msg[1]) # add data to console 
+        self.consoleText.append(data) # add data to console 
 
 
 class CreateConsole(QDialog):
     def __init__(self):
         super().__init__()
+
+        self.log = getmylogger(__name__)
+
         self.setWindowTitle("New Console")
 
         topicLabel = QLabel("Topic")
@@ -86,7 +95,7 @@ class CreateConsole(QDialog):
         try:
             topic = self.consoleTopic.text()
         except ValueError as e:
-            log.error(f"Error in getValues {e}")
+            self.log.error(f"Error in getValues {e}")
 
         return str(topic)
 

@@ -9,7 +9,7 @@ from core.ZmqDevice import ZmqDevice
 from core.SimulatedDevice import SimulatedDevice
 
 from client.gui import GUI
-from logger import getmylogger
+from common.logger import getmylogger
 
 log = getmylogger(__name__)
 
@@ -38,6 +38,7 @@ def main():
     
     app = QApplication(sys.argv)
     gui = GUI(dataInterface)
+    gui.show()
    
 
     sys.exit(app.exec())

@@ -1,6 +1,9 @@
 import logging
 
 def getmylogger(name) -> logging.getLogger():
+    if logging.getLogger(name).handlers:
+        # Logger already configured, return existing logger
+        return logging.getLogger(name)
     file_formatter = logging.Formatter('%(asctime)s~%(levelname)s~%(message)s~module:%(module)s~function:%(module)s')
     console_formatter = logging.Formatter('%(levelname)s -- %(message)s')
     

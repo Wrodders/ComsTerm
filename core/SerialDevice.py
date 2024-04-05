@@ -2,7 +2,7 @@ import serial, serial.tools.list_ports
 from queue import Empty
 
 from core.device import BaseDevice, MsgFrame
-from logger import getmylogger
+from common.logger import getmylogger
 
 
 log = getmylogger(__name__)
@@ -44,7 +44,7 @@ class SerialDevice(BaseDevice):
         @Brief: Serial IO Thread
         """
         log.info("Started Serial Interface I/O Thread")
-    
+        self.publisher.bind()
         while (not self.workerIO.stopEvent.is_set()) and self.port.is_open:
             try:
                 self.readDevice()

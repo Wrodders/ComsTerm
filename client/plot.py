@@ -9,11 +9,9 @@ import matplotlib.animation as animation
 
 from core.device import TopicMap, Worker
 from core.ZmqDevice import ZmqSub, Transport, Endpoint
-from logger import getmylogger
+from common.logger import getmylogger
 
 from collections import deque , defaultdict
-
-log = getmylogger(__name__)
 
 plt.style.use('dark_background')
 
@@ -26,9 +24,10 @@ Plot:   Subscribes to topics publishing data over ZMQ.
         Add and remove DataSeries dynamically. 
 """
 
-class PlotBase(QFrame):
+class BasePlot(QFrame):
     def __init__(self):
         super().__init__()
+        self.log = getmylogger(__name__)
         self.workerIO = Worker(self._run)
         self.sub = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
         self.dataSeries = defaultdict(deque)
@@ -43,7 +42,7 @@ class PlotBase(QFrame):
                 self.dataSeries[topic].append(data)
 
 
-class LinePlot(PlotBase):
+class LinePlot(BasePlot):
     def __init__(self,yrange: tuple[float, float], xrange:int, protocol :str ):
         super().__init__()
 
@@ -127,7 +126,7 @@ class LinePlot(PlotBase):
                     argData = float(data.split(":")[i]) # extract data arguments from topic header
                     self.dataSet[name].append(argData)   
         except Exception as e:
-           log.error(f"Exception in UpdateData:{e}")
+           self.log.error(f"Exception in UpdateData:{e}")
            pass
        
     def animate(self, i, lines):
@@ -147,7 +146,7 @@ class CreatePlot(QDialog):
         self.maxDataSeries = 8
 
     def initUI(self):
-
+        self.log = getmylogger(__name__)
         self.setWindowTitle("New Plot")
         self.setMinimumSize(600,300)
 
@@ -189,7 +188,7 @@ class CreatePlot(QDialog):
     def newSeriesHandle(self):
         rowCount = self.table.rowCount()
         if rowCount >= self.maxDataSeries:
-            log.error(f"Max number of Data Series per plot is {self.maxDataSeries}")
+            self.log.error(f"Max number of Data Series per plot is {self.maxDataSeries}")
             return
         
         self.table.insertRow(rowCount)

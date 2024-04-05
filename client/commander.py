@@ -3,9 +3,8 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
 
-from logger import getmylogger
+from common.logger import getmylogger
 
-log = getmylogger(__name__)
 
 
 
@@ -13,6 +12,8 @@ class Commander(QWidget):
     cmdSendSig = QtCore.pyqtSignal(str)
     def __init__(self):
         super().__init__()
+
+        self.log = getmylogger(__name__)
         self.initUI()
         
     def initUI(self):

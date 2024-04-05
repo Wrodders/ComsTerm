@@ -5,10 +5,8 @@ from common.worker import Worker
 from core.messages import MsgFrame, TopicMap
 from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
 
-from logger import getmylogger
+from common.logger import getmylogger
 
-
-log = getmylogger(__name__)
 
 class Devices(Enum):
     SERIAL = 0
@@ -18,8 +16,6 @@ class Devices(Enum):
     BLE = 4
     
 
-
-
 """
 @Brief: Base Class for a Device. Handles communications between device and ComsTerm.
 @Description:   Implements a set of CMDs and PUBs topics. Parses and Validates Commands against a devices protocols. 
@@ -28,7 +24,7 @@ class Devices(Enum):
 class BaseDevice():
     def __init__(self):
         super().__init__()
-        self.name = str()
+        self.log = getmylogger(__name__)
 
         self.workerIO = Worker(self._run)
         self.cmdQueue = Queue() 
@@ -45,8 +41,7 @@ class BaseDevice():
         self.pubMap.registerTopic(topicID = 'b', topicName="ERR", topicFmt="s", delim="")
         self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicFmt="s", delim="")
 
-        topics = self.pubMap.getAllTopics()
-        print(topics)
+
 
 
     def parseCmd(self, text: str) -> str:
@@ -54,7 +49,7 @@ class BaseDevice():
         cmdName = cmdParts[0] 
         cmdTopic = self.cmdMap.topics.get(cmdName)
         if cmdTopic == None: # exit early if cmd name wrong 
-            log.warning(f"Cmd Name; {cmdName} not found")
+            self.log.warning(f"Cmd Name; {cmdName} not found")
             return ""
 
         fmt = cmdTopic.fmt # grab the topics protocol format string
@@ -64,7 +59,7 @@ class BaseDevice():
         else:
             numArgs = sum(1 for c in cmdArgs[0] if c == cmdTopic.delim) + 1 # num args = num delim + 1 
         if numArgs != cmdTopic.nArgs:
-            log.warning(f"Cmd syntax error: incorrect num args for {cmdName} {fmt}")
+            self.log.warning(f"Cmd syntax error: incorrect num args for {cmdName} {fmt}")
             return ""
 
         data = cmdTopic.delim.join(cmdArgs)  # Join arguments using delimiter

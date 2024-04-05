@@ -2,6 +2,41 @@ import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QDial, QSlider, QLabel, QGridLayout, QPushButton, QFrame, QVBoxLayout, QHBoxLayout, QSplitter
 from PyQt6.QtCore import Qt
 
+class Controls(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.initUI()
+
+    def initUI(self):
+        self.setFixedSize(500, 300)
+
+        # Splitter with Frames
+        splitter = QSplitter()
+
+        sliders_frame = SlidersFrame()
+        dials_frame = DialsFrame()
+
+        splitter.addWidget(sliders_frame)
+        splitter.addWidget(dials_frame)
+
+        # Set the sizes of the sections
+        sizes = [3 * self.height() // 4, self.height() // 4]
+        splitter.setSizes(sizes)
+
+        self.configButton = QPushButton("Config")
+        self.configButton.setMaximumWidth(150)
+        self.configButton.clicked.connect(self.configure)
+
+        layout = QVBoxLayout()
+        layout.addWidget(splitter)
+        layout.addWidget(self.configButton)
+        self.setLayout(layout)
+
+
+    def configure(self):
+        pass
+
 class SlidersFrame(QFrame):
     def __init__(self):
         super().__init__()
@@ -75,40 +110,6 @@ class DialsFrame(QFrame):
     def updateLabel(self, label, value):
         label.setText(f"{label.text().split(':')[0]}: {value}")
 
-class Controls(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.initUI()
-
-    def initUI(self):
-        self.setFixedSize(500, 300)
-
-        # Splitter with Frames
-        splitter = QSplitter()
-
-        sliders_frame = SlidersFrame()
-        dials_frame = DialsFrame()
-
-        splitter.addWidget(sliders_frame)
-        splitter.addWidget(dials_frame)
-
-        # Set the sizes of the sections
-        sizes = [3 * self.height() // 4, self.height() // 4]
-        splitter.setSizes(sizes)
-
-        self.configButton = QPushButton("Config")
-        self.configButton.setMaximumWidth(150)
-        self.configButton.clicked.connect(self.configure)
-
-        layout = QVBoxLayout()
-        layout.addWidget(splitter)
-        layout.addWidget(self.configButton)
-        self.setLayout(layout)
-
-
-    def configure(self):
-        pass
 
 def main():
     app = QApplication(sys.argv)

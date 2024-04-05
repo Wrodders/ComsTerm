@@ -1,7 +1,7 @@
 import random, time, lorem
 from queue import Empty
 
-from logger import getmylogger
+from common.logger import getmylogger
 from core.device import BaseDevice
 
 log = getmylogger(__name__)
@@ -19,7 +19,6 @@ class SimulatedDevice(BaseDevice):
         # Register Device Topics
         self.pubMap.registerTopic(topicID='3', topicName="LINE", topicFmt="f:f:f:f", delim=":")
 
-        print(f"PUB: {self.pubMap.getAllTopics()}")
 
         #Simulated only parameters
         self.rate = rate # publish rate in seconds
@@ -35,6 +34,8 @@ class SimulatedDevice(BaseDevice):
     def _run(self):
         '''Execute Thread'''
         log.info("Started Simulated Device ")
+        self.publisher.bind()
+        log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
         while not self.workerIO.stopEvent.is_set():
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()

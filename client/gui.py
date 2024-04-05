@@ -16,14 +16,15 @@ from client.plot import  CreatePlot, LinePlot
 from client.console import CreateConsole, Console
 from client.commander import Commander
 from client.menues import ConnectionsDialog
-from logger import getmylogger
+from common.logger import getmylogger
 
-log = getmylogger(__name__)
+
 
 class GUI(QWidget):
     
     def __init__(self, deviceInterface:BaseDevice):
         super().__init__()
+        self.log = getmylogger(__name__)
 
         self.setWindowTitle("ComsTermV5")
         self.device = deviceInterface
@@ -34,10 +35,10 @@ class GUI(QWidget):
 
         self.initUI()
         self.connectSignals()
-        self.show()
 
     def closeEvent(self, event):
-        log.info("Closing GUI")
+        self.log.info("Closing GUI")
+        [win.close() for win in self.windows]
         self.device._stop() # stop device thread
         event.accept()
     def initUI(self): 
