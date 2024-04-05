@@ -413,14 +413,18 @@ class ZmqDevice(BaseInterface):
         while not self._stopped:
             try:
                 topic, msgPacket = self.sub.socket.recv_multipart()
-                recvMsg = MsgFrame.parse_packet(msgPacket.decode())
-
-                if recvMsg.ID:
-                    topic=topic.decode() + '/' + recvMsg.ID
-                    self.deviceDataSig.emit((topic, recvMsg.data))
+                if msgPacket != "":
+                    recvMsg = MsgFrame.parse_packet(msgPacket.decode())
+                    if recvMsg.ID:
+                        try:
+                            topic=topic.decode() + '/' + recvMsg.ID
+                            self.deviceDataSig.emit((topic, recvMsg.data))
+                        except Exception as e:
+                            log.warning(f"Exception in ZmqQTSignal:{e} ")
+                            pass
             except Exception as e:
-                log.error(f"Exception in ZmqQTSignal:{e} ")
-                break
+                log.error(f"Exception in ZmqQTSignal:{e}")
+                pass
         
         self.sub.close() 
         log.info("exit Zmq Bridge QT I/O Thread")  
