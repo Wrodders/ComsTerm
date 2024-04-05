@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import *
 from core.zmqutils import ZmqBridgeQt
 
 from common.logger import getmylogger
+from common.messages import TopicMap
 
 
 class Console(QWidget):
@@ -26,10 +27,11 @@ class Console(QWidget):
         self.setWindowTitle(topic)
         self.initUI()
         self.log.debug(f"Opened Console {self.topic}")
-        self.zmqBridge = ZmqBridgeQt()
-        # self.zmqBridge.subscriber.addTopicSub(topic)
+        self.zmqBridge = ZmqBridgeQt() 
+        
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
+        self.zmqBridge.subscriber.addTopicSub(topic)
 
     def closeEvent(self, event):
         """Event handler for closing the console.
@@ -49,6 +51,9 @@ class Console(QWidget):
         self.vBox.setContentsMargins(5, 5, 5, 5)
         self.setLayout(self.vBox)
 
+        self.configBtn = QPushButton("Settings")
+        self.configBtn.setMaximumWidth(300)
+
         self.consoleText = QTextEdit()
         self.consoleText.setReadOnly(True)
         self.consoleText.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
@@ -57,6 +62,7 @@ class Console(QWidget):
 
         # Add Widgets to Layout
         self.vBox.addWidget(self.consoleText)
+        self.vBox.addWidget(self.configBtn)
 
     def clearConsole(self):
         """Clears the console."""
@@ -78,10 +84,10 @@ class Console(QWidget):
         self.consoleText.append(data)  # add data to console
 
 
-class CreateConsole(QDialog):
+class ConfigConsole(QDialog):
     """Dialog for creating a new console."""
 
-    def __init__(self):
+    def __init__(self,  topicMap: TopicMap ):
         """Constructor method for CreateConsole class."""
         super().__init__()
 
@@ -90,7 +96,11 @@ class CreateConsole(QDialog):
         self.setWindowTitle("New Console")
 
         topicLabel = QLabel("Topic")
-        self.consoleTopic = QLineEdit()
+        topicNames = topicMap.getTopicNames()
+        self.consoleTopic = QComboBox()
+        self.consoleTopic.addItems(topicNames)
+        
+
         form = QFormLayout()
         form.addRow(topicLabel, self.consoleTopic)
 
@@ -108,7 +118,7 @@ class CreateConsole(QDialog):
 
     def validateInput(self):
         """Validates the user input."""
-        if self.consoleTopic.text() == "":
+        if self.consoleTopic.currentText == "":
             errMsg = QMessageBox.critical(
                 self, "Error", "All Fields are Mandatory"
             )
@@ -122,7 +132,8 @@ class CreateConsole(QDialog):
             str: The topic entered in the console topic field.
         """
         try:
-            topic = self.consoleTopic.text()
+            topic = self.consoleTopic.currentText()
+            print(topic)
         except ValueError as e:
             self.log.error(f"Error in getValues {e}")
 

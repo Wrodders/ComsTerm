@@ -31,7 +31,7 @@ class SerialDevice(BaseDevice):
             log.error(f"No ports found for key: {key}")
             log.warning(f"Serial I/O Thread not started")
             return
-        elif self.connect(ports[0], 115200) == False:
+        elif self.connect(ports[0], 9600) == False:
             log.error(f"Failed to connect to{ports[0]}")
             log.warning(f"Serial I/O Thread not started")
             return
@@ -72,7 +72,6 @@ class SerialDevice(BaseDevice):
             
             topic = self.pubMap.getNameByID(recvMsg.ID)
             if topic != "":  
-                print(f"TP: {topic}", recvMsg.data)
                 self.publisher.send(topic, recvMsg.data) # Output Message
 
         except UnicodeDecodeError as e:

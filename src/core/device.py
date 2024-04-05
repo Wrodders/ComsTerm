@@ -2,7 +2,7 @@ from queue import Queue
 from enum import Enum
 
 from common.worker import Worker
-from core.messages import MsgFrame, TopicMap
+from common.messages import MsgFrame, TopicMap
 from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
 
 from common.logger import getmylogger
@@ -37,10 +37,12 @@ class BaseDevice():
         self.cmdMap.registerTopic(topicID = 'a', topicName="ID", topicFmt="", delim="")
         self.cmdMap.registerTopic(topicID = 'b', topicName="RESET", topicFmt="d:d", delim=":")
 
-        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = 'b', topicName="ERR", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicFmt="c:c", delim=":")
+        self.pubMap.registerTopic(topicID = 'b', topicName="ERROR", topicFmt="s", delim="")
         self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicFmt="s", delim="")
-
+        self.pubMap.registerTopic(topicID = 'd', topicName="DEBUG", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicFmt="f:f:f:f:f", delim=":")
+        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
 
 
 
@@ -76,6 +78,7 @@ class BaseDevice():
         packet = self.parseCmd(text)
         if packet != "":
             self.cmdQueue.put(packet)
+
     
     def _run(self):
         raise NotImplementedError("Subclasses must implement _run method")

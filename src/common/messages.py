@@ -68,8 +68,9 @@ class TopicMap:
         topic = self.topics.get(name)
         return topic.ID if topic else ""
 
-    def getAllTopics(self) -> List[Tuple[str, str,  str, int]]:
-        return [(topic.name, topic.ID, topic.fmt, topic.nArgs) for topic in self.topics.values()]
+    def getTopicNames(self) -> List[str]:
+        
+        return list(set([topic.name for topic in self.topics.values()]))
 
     def registerTopic(self, topicID : str, topicName: str, topicFmt: str, delim: str):
         if delim != "":

@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from core.device import BaseDevice
 
 from client.plot import CreatePlot, LinePlot
-from client.console import CreateConsole, Console
+from client.console import ConfigConsole, Console
 from client.commander import Commander
 from client.menues import ConnectionsDialog
 from common.logger import getmylogger
@@ -83,7 +83,10 @@ class GUI(QWidget):
        
     def newConsoleHandle(self):
         """Handles creation of a new console."""
-        diag = CreateConsole()
+
+
+        
+        diag = ConfigConsole(self.device.pubMap)
         if diag.exec() == True:
             console = Console(topic=diag.getValues())
             self.windows.append(console)
