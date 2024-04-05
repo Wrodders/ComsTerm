@@ -240,7 +240,7 @@ class SerialDevice(BaseInterface):
             log.error(f"No ports found for key: {key}")
             log.warning(f"Serial I/O Thread not started")
             return
-        elif self.connect(ports[0], 115200) == False:
+        elif self.connect(ports[0], 9600) == False:
             log.error(f"Failed to connect to{ports[0]}")
             log.warning(f"Serial I/O Thread not started")
             return
@@ -255,7 +255,7 @@ class SerialDevice(BaseInterface):
             try: 
                 # Read and parse a MsgFrame from serial port, emit to Qt Main loop                   
                 msgPacket = self.port.readline()
-                recvMsg = MsgFrame.parse_packet(msgPacket)
+                recvMsg = MsgFrame.parse_packet(msgPacket.decode())
                 if recvMsg.ID:
                     self.deviceDataSig.emit((recvMsg.ID, recvMsg.data)) # output Data
                                                
