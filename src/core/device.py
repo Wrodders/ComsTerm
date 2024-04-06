@@ -4,7 +4,8 @@ from enum import Enum
 from common.worker import Worker
 from common.messages import MsgFrame, TopicMap
 from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
-
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 from common.logger import getmylogger
 
 
@@ -14,7 +15,17 @@ class Devices(Enum):
     TCP = 2
     ZMQ = 3
     BLE = 4
+    SIM = 5
+
+
+@dataclass
+class DeviceInfo():
+    name : str = ""
+    devType : Devices = Devices.SIM
+    status : bool = False
+    threadId : str = ""
     
+
 
 """
 @Brief: Base Class for a Device. Handles communications between device and ComsTerm.
@@ -25,6 +36,8 @@ class BaseDevice():
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
+
+        self.info = DeviceInfo()
 
         self.workerIO = Worker(self._run)
         self.cmdQueue = Queue() 

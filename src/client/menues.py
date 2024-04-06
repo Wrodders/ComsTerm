@@ -1,84 +1,165 @@
 from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QWidget
 
-class ConnectionsDialog(QDialog):
-    """Dialog for managing connection settings."""
+from core.device import Devices
+
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+from common.utils import scanUSB
+
+
+
+
+class SettingsMenu(QFrame):
 
     def __init__(self):
-        """Constructor method for ConnectionsDialog class."""
         super().__init__()
 
-        self.setWindowTitle("Connection Settings")
-        self.setFixedSize(500, 300)  # Set dialog size to fixed size
+        self.initUI()
 
-        self.vBox = QVBoxLayout()
-
-        # Table to display device connections
-        self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["Connection Method", "Device Path", "Status"])
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.vBox.addWidget(self.table)
-
-        # Sub-widget for adding connections
-        self.addConnectionWidget = QWidget()
-        self.addConnectionLayout = QHBoxLayout()
-
-        # Combo box for selecting connection method
-        self.connectionMethodCombo = QComboBox()
-        self.connectionMethodCombo.addItems(["Serial", "UDP", "ZMQ"])
-        self.addConnectionLayout.addWidget(self.connectionMethodCombo)
-
-        # Button to connect device
-        self.connectButton = QPushButton("Connect")
-        self.connectButton.clicked.connect(self.addConnection)
-        self.addConnectionLayout.addWidget(self.connectButton)
-
-        # Button to disconnect device
-        self.disconnectButton = QPushButton("Disconnect")
-        self.disconnectButton.clicked.connect(self.disconnectConnection)
-        self.addConnectionLayout.addWidget(self.disconnectButton)
-
-        self.addConnectionWidget.setLayout(self.addConnectionLayout)
-        self.vBox.addWidget(self.addConnectionWidget)
-
-        self.setLayout(self.vBox)
-
-    def addConnection(self):
-        """Adds a new connection to the table."""
-        method = self.connectionMethodCombo.currentText()
-        devicePath = "/path/to/device"  # Replace with actual device path
-        status = "Connected"  # Assume connected for simplicity
-        rowPosition = self.table.rowCount()
-        self.table.insertRow(rowPosition)
-        self.table.setItem(rowPosition, 0, QTableWidgetItem(method))
-        self.table.setItem(rowPosition, 1, QTableWidgetItem(devicePath))
-        self.table.setItem(rowPosition, 2, QTableWidgetItem(status))
+    def initUI(self):
+        pass
 
 
-    def connectDevice(self):
-        """Connects the selected device."""
-        method = self.connectionMethodCombo.currentText()
-        if method == "Serial":
-            serial_device = SerialDevice()
-            try:
-                devices = serial_device.scan()
-                if len(devices) == 0:
-                    QMessageBox.warning(self, "No Devices", "No devices found.")
-                elif len(devices) == 1:
-                    QMessageBox.information(self, "Device Found", f"Device found: {devices[0]}")
-                else:
-                    device, ok = QInputDialog.getItem(self, "Select Device", "Available Devices:", devices, 0, False)
-                    if ok:
-                        QMessageBox.information(self, "Device Selected", f"Device selected: {device}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error occurred while scanning devices: {str(e)}")
-                del serial_device
 
 
-    def disconnectConnection(self):
-        """Disconnects the selected connection."""
-        selectedRow = self.table.currentRow()
-        if selectedRow != -1:
-            self.table.removeRow(selectedRow)
+
+
+"""
+New Device Config UI
+"""
+
+class DeviceConfig(QWidget):
+    def __init__(self):
+        super(DeviceConfig, self).__init__()
+        self.grid = QGridLayout()
+        self.setMinimumWidth(350)
+
+        self.serialConfig = SerialConfig()
+        self.zmqConfig = ZMQConfig()
+        self.tcpConfig = TCPConfig()
+        self.udpConfig = UDPConfig()
+        
+        self.stackLayout = QStackedLayout()
+        self.stackLayout.addWidget(self.serialConfig)
+        self.stackLayout.addWidget(self.zmqConfig)
+        self.stackLayout.addWidget(self.tcpConfig)
+        self.stackLayout.addWidget(self.udpConfig)
+        self.connectBtn = QPushButton("Connect")
+        self.connectBtn.setMaximumWidth(350)
+        self.disconnectBtn = QPushButton("Disconnect")
+        self.disconnectBtn.setMaximumWidth(350)
+        self.conDeviceCB = QComboBox()
+        self.conDeviceCB.setMaximumWidth(350)
+        self.conDeviceCB.currentIndexChanged.connect(self.updateDeviceStack)
+        self.conDeviceCB.addItems(Devices._member_names_)
+
+        self.grid.addWidget(self.conDeviceCB, 0,0, 1, 2)
+        self.grid.addLayout(self.stackLayout, 1, 0 , 2, 2)
+        self.grid.addWidget(self.connectBtn, 3, 0, 1,1)
+        self.grid.addWidget(self.disconnectBtn, 3, 1, 1,1)
+        self.setLayout(self.grid)
+
+    def updateDeviceStack(self):
+        self.stackLayout.setCurrentIndex(self.conDeviceCB.currentIndex())
+
+
+
+class SerialConfig(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setMaximumWidth(350)
+        self.setFrameShape(self.Shape.StyledPanel)
+        self.setFrameShadow(self.Shadow.Plain)
+        layout = QGridLayout()
+        
+        layout.addWidget(QLabel("Serial Port:"), 0, 0)
+        self.portCB = QComboBox()
+        self.portCB.addItems(scanUSB("usb"))
+        self.baudRate = QComboBox()
+        self.baudRate.addItems(["9600", "115200"])
+        self.dataBits = QComboBox()
+        self.dataBits.addItems(["8", "7", "6", "5"])  
+        self.stopBits = QComboBox()
+        self.stopBits.addItems(["1", "1.5", "2"])  
+        self.parity = QComboBox()
+        self.parity.addItems(["None", "Even", "Odd", "Mark", "Space"])
+        self.rts_cts = QCheckBox()
+        self.dtr_dsr = QCheckBox()
+        
+        layout.addWidget(self.portCB, 0, 1)
+        layout.addWidget(QLabel("Baud Rate:"), 1, 0)
+        layout.addWidget(self.baudRate, 1, 1)
+        layout.addWidget(QLabel("Data Bits:"), 2, 0)
+        layout.addWidget(self.dataBits, 2, 1)
+        layout.addWidget(QLabel("Stop Bits:"), 3, 0)
+        layout.addWidget(self.stopBits, 3, 1)
+        layout.addWidget(QLabel("Parity:"), 4, 0)
+        layout.addWidget(self.parity, 4, 1)
+        layout.addWidget(QLabel("RTS/CTS:"), 5, 0)
+        layout.addWidget(self.rts_cts, 5, 1)
+        layout.addWidget(QLabel("DTR/DSR:"), 6, 0)
+        layout.addWidget(self.dtr_dsr, 6, 1)
+
+        self.setLayout(layout)
+
+    def getPort(self)-> str:
+        return self.portCB.currentText()
+    
+    def getBaud(self)-> int:
+        return int(self.baudRate.currentText())
+
+class TCPConfig(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setMaximumWidth(350)
+        self.setFrameShape(self.Shape.StyledPanel)
+        self.setFrameShadow(self.Shadow.Plain)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("IP Address:"), 0, 0)
+        layout.addWidget(QComboBox(), 0, 1)
+        layout.addWidget(QLabel("Port:"), 1, 0)
+        layout.addWidget(QComboBox(), 1, 1)
+
+        self.setLayout(layout)
+
+class UDPConfig(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setMaximumWidth(350)
+        self.setFrameShape(self.Shape.StyledPanel)
+        self.setFrameShadow(self.Shadow.Plain)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("IP Address:"), 0, 0)
+        layout.addWidget(QComboBox(), 0, 1)
+        layout.addWidget(QLabel("Port:"), 1, 0)
+        layout.addWidget(QComboBox(), 1, 1)
+
+        self.setLayout(layout)
+
+class ZMQConfig(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setMaximumWidth(350)
+        self.setFrameShape(self.Shape.StyledPanel)
+        self.setFrameShadow(self.Shadow.Plain)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Socket Endpoint:"), 0, 0)
+        layout.addWidget(QComboBox(), 0, 1)
+
+        self.setLayout(layout)

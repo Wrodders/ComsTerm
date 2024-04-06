@@ -7,8 +7,16 @@ from core.device import BaseDevice
 from client.plot import CreatePlot, LinePlot
 from client.console import ConfigConsole, Console
 from client.commander import Commander
-from client.menues import ConnectionsDialog
+from client.menues import DeviceConfig, SettingsMenu
 from common.logger import getmylogger
+from typing import Dict, List, Tuple
+
+
+from core.SerialDevice import SerialDevice
+from core.ZmqDevice import ZmqDevice
+from core.SimulatedDevice import SimulatedDevice
+
+from core.device import Devices
 
 class GUI(QWidget):
     """
@@ -19,17 +27,16 @@ class GUI(QWidget):
     GUI Communicated to device
     """
     
-    def __init__(self, deviceInterface: BaseDevice):
+    def __init__(self):
         """Constructor method for GUI class."""
         super().__init__()
         self.log = getmylogger(__name__)
 
         self.setWindowTitle("ComsTermV5")
-        self.device = deviceInterface
-        self.device._start()  # Begin Device Server
 
+        self.device = None
         self.windows = list()
-        self.devices = list()
+     
 
         self.initUI()
         self.connectSignals()
@@ -38,7 +45,8 @@ class GUI(QWidget):
         """Event handler for closing the GUI."""
         self.log.info("Closing GUI")
         [win.close() for win in self.windows]
-        self.device._stop()  # stop device thread
+        if isinstance(self.device, BaseDevice):
+            self.device._stop()
         event.accept()
 
     def initUI(self): 
@@ -48,24 +56,27 @@ class GUI(QWidget):
         self.grid = QGridLayout()
         self.grid.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self.grid)
-
         # Create Widgets
-        self.settingsB = QPushButton("Settings")
-        self.settingsB.setMaximumWidth(100)
-        self.connectionB = QPushButton("Connections")
-        self.connectionB.setMaximumWidth(100)
+        self.commander = Commander()
+        self.settings = SettingsMenu()
+        self.deviceCon = DeviceConfig()
+
+
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.commander, "Commander")
+        self.tabs.addTab(self.settings, "Settings")
+        self.tabs.addTab(self.deviceCon, "Device")
+
         self.newConsoleB = QPushButton("New Console")
         self.newConsoleB.setMaximumWidth(100)
         self.newPlotB = QPushButton("New Plot")
         self.newPlotB.setMaximumWidth(100)
-        self.commander = Commander()
 
         # Add to Layout
-        self.grid.addWidget(self.settingsB, 0, 0)
-        self.grid.addWidget(self.connectionB, 0, 1)
-        self.grid.addWidget(self.newPlotB, 0, 2)
-        self.grid.addWidget(self.newConsoleB, 0, 3)
-        self.grid.addWidget(self.commander, 1, 0, 4, 4)
+        self.grid.addWidget(self.newPlotB, 0, 0)
+        self.grid.addWidget(self.newConsoleB, 0, 1)
+        self.grid.addWidget(self.tabs, 1, 0, 4, 4)
         
     def connectSignals(self):
         """Connects signals to slots."""
@@ -73,9 +84,8 @@ class GUI(QWidget):
         self.newPlotB.clicked.connect(self.newPlotHandle)
         self.newConsoleB.clicked.connect(self.newConsoleHandle)
         self.commander.sendB.clicked.connect(self.sendCmdHandle)
-        self.settingsB.clicked.connect(self.settingsHandle)
-        self.connectionB.clicked.connect(self.connectionHandle)
-     
+        self.deviceCon.connectBtn.clicked.connect(self.handleConnect)
+
     def newPlotHandle(self):
         """Handles creation of a new plot."""
         diag = CreatePlot()
@@ -83,8 +93,9 @@ class GUI(QWidget):
        
     def newConsoleHandle(self):
         """Handles creation of a new console."""
-
-
+        if(self.device == None):
+            err = QMessageBox.critical(self, "Error", "No Device Connected")
+            return
         
         diag = ConfigConsole(self.device.pubMap)
         if diag.exec() == True:
@@ -95,14 +106,37 @@ class GUI(QWidget):
     def sendCmdHandle(self):
         """Handles sending a command."""
         text = self.commander.cmdEntry.text()
-        self.device.sendCmd(text)
+        self.device[0].sendCmd(text)
 
-    def settingsHandle(self):
-        """Handles opening settings."""
-        pass
 
-    def connectionHandle(self):
-        """Handles managing connections."""
-        diag = ConnectionsDialog()
-        if diag.exec() == True:
-            pass
+    def handleConnect(self):
+
+        if self.device != None:
+            err = QMessageBox.information(self, "Info", "Already Connected")
+            
+
+        else:
+            if self.deviceCon.conDeviceCB.currentText() == Devices.SERIAL.name:
+                self.device = SerialDevice()
+                portPath = self.deviceCon.serialConfig.getPort()
+                if portPath == "":
+                    err = QMessageBox.critical(self, "Error", "No Ports Found")
+                    return
+                baud = self.deviceCon.serialConfig.getBaud()
+                if self.device.connect(portPath, baud ):
+                    self.device._start()
+            
+            elif self.deviceCon.conDeviceCB.currentText() ==Devices.SIM.name:
+                pass
+            elif self.deviceCon.conDeviceCB.currentText() == Devices.BLE.name:
+                raise NotImplementedError("BLE")
+            elif self.deviceCon.conDeviceCB.currentText() == Devices.TCP.name:
+                raise NotImplementedError("TCP")
+            elif self.deviceCon.conDeviceCB.currentText() == Devices.UDP.name:
+                raise NotImplementedError("UDP")
+            elif self.deviceCon.conDeviceCB.currentText() == Devices.ZMQ.name:
+                raise NotImplementedError("ZMQ")
+
+        
+
+

@@ -119,9 +119,7 @@ class ConfigConsole(QDialog):
     def validateInput(self):
         """Validates the user input."""
         if self.consoleTopic.currentText == "":
-            errMsg = QMessageBox.critical(
-                self, "Error", "All Fields are Mandatory"
-            )
+            errMsg = QMessageBox.critical(self, "Error", "All Fields are Mandatory")
             return
         self.accept()
 

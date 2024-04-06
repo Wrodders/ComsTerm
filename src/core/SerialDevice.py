@@ -3,6 +3,7 @@ from queue import Empty
 
 from core.device import BaseDevice, MsgFrame
 from common.logger import getmylogger
+from common.utils import scanUSB
 
 
 log = getmylogger(__name__)
@@ -22,19 +23,13 @@ class SerialDevice(BaseDevice):
 
     def _start(self):
         """
-        @Brief: Connect to USB port being IO thread
+        @Brief: Starts Worker IO Thread to read and write from serial port
         @Description: Scans for usb ports and connects to the first one
-        """
-        key = "usb"
-        ports = self.scanUSB(key)
-        if not ports :
-            log.error(f"No ports found for key: {key}")
+        """        
+        if self.port.is_open == False:
+            log.error(f"Port {self.port.name} not open")
             log.warning(f"Serial I/O Thread not started")
-            return
-        elif self.connect(ports[0], 9600) == False:
-            log.error(f"Failed to connect to{ports[0]}")
-            log.warning(f"Serial I/O Thread not started")
-            return
+
 
         self.workerIO._begin()  
         
@@ -69,7 +64,6 @@ class SerialDevice(BaseDevice):
                 return
             #Decode Message
             recvMsg = MsgFrame.extractMsg(msg)        
-            
             topic = self.pubMap.getNameByID(recvMsg.ID)
             if topic != "":  
                 self.publisher.send(topic, recvMsg.data) # Output Message
@@ -97,12 +91,8 @@ class SerialDevice(BaseDevice):
 
     """
     ************** PUBLIC FUNCTIONS *************************
-    """
-    def scanUSB(self, key: str) -> list:
-        ports = [p.device for p in serial.tools.list_ports.comports() if key.lower() in p.device]
-        return ports
-    
-    def connect(self, portNum, baud) -> bool:
+    """    
+    def connect(self, portNum : str, baud: int) -> bool:
         '''Connect to serial device and start reading'''
         log.info(f"Connecting Device to: {portNum}, At Baud: {baud}")
         if self.port.is_open == True:
