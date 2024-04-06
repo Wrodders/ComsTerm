@@ -85,6 +85,8 @@ class GUI(QWidget):
         self.newConsoleB.clicked.connect(self.newConsoleHandle)
         self.commander.sendB.clicked.connect(self.sendCmdHandle)
         self.deviceCon.connectBtn.clicked.connect(self.handleConnect)
+        self.deviceCon.disconnectBtn.clicked.connect(self.handelDisconnect)
+
 
     def newPlotHandle(self):
         """Handles creation of a new plot."""
@@ -113,8 +115,6 @@ class GUI(QWidget):
 
         if self.device != None:
             err = QMessageBox.information(self, "Info", "Already Connected")
-            
-
         else:
             if self.deviceCon.conDeviceCB.currentText() == Devices.SERIAL.name:
                 self.device = SerialDevice()
@@ -125,7 +125,6 @@ class GUI(QWidget):
                 baud = self.deviceCon.serialConfig.getBaud()
                 if self.device.connect(portPath, baud ):
                     self.device._start()
-            
             elif self.deviceCon.conDeviceCB.currentText() ==Devices.SIM.name:
                 pass
             elif self.deviceCon.conDeviceCB.currentText() == Devices.BLE.name:
@@ -137,6 +136,15 @@ class GUI(QWidget):
             elif self.deviceCon.conDeviceCB.currentText() == Devices.ZMQ.name:
                 raise NotImplementedError("ZMQ")
 
+
+    def handelDisconnect(self):
+
+        if self.device == None:
+            err = QMessageBox.information(self, "Info", "No Connections")
+        else:
+            self.device._stop()
+            del(self.device)
+            self.device = None
         
 
 
