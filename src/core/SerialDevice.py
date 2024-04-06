@@ -31,8 +31,8 @@ class SerialDevice(BaseDevice):
     def __init__(self, info: SerialInfo):
         super().__init__()
         self.info = info
-        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicFmt="f:f:f:f:f", delim=":")
-        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
+        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicArgs=["L", "R", "T", "V", "M", "B"], delim=":")
+        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
 
         self.port = serial.Serial() # Data input
         self.connect()
@@ -82,10 +82,12 @@ class SerialDevice(BaseDevice):
                 return
             #Decode Message
             recvMsg = MsgFrame.extractMsg(msg)        
-            topic = self.pubMap.getNameByID(recvMsg.ID)
+            topic = self.pubMap.getNameByID(recvMsg.ID) # serial msgFrameTopic
             if topic != "":  
-                self.publisher.send(topic, recvMsg.data) # Output Message
-
+                delim , args = self.pubMap.getTopicNameFormat(topic)
+                msgArgs = recvMsg.data.split(delim)
+                msgTopics = [(topic + "/" + arg) for arg in args]
+                [self.publisher.send(msgTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
         except UnicodeDecodeError as e:
             log.warning(f"{e}")
             return 

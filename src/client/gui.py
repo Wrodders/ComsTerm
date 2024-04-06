@@ -14,7 +14,7 @@ from typing import Dict, List, Tuple
 
 from core.SerialDevice import SerialDevice
 from core.ZmqDevice import ZmqDevice
-from core.SimulatedDevice import SimulatedDevice
+from core.SimulatedDevice import SimulatedDevice, SimInfo
 
 from core.device import Devices
 
@@ -91,15 +91,25 @@ class GUI(QWidget):
 
     def newPlotHandle(self):
         """Handles creation of a new plot."""
-        diag = CreatePlot()
-        diag.exec()
+        if isinstance(self.comsTerm.device, BaseDevice):
+            diag = CreatePlot(self.comsTerm.device.pubMap)
+            if diag.exec() == True:
+                protocol = diag.topicMenu.saveProtocol()
+                plot = LinePlot(protocol=protocol, yrange=(10,-10),xrange=100)
+                self.windows.append(plot)
+                plot.show()
+                pass
+        else:
+            err = QMessageBox.critical(self, "Error", "No Device Connected")
+                
        
     def newConsoleHandle(self):
         """Handles creation of a new console."""
         if(isinstance(self.comsTerm.device, BaseDevice)):
             diag = ConfigConsole(self.comsTerm.device.pubMap)
             if diag.exec() == True:
-                console = Console(topic=diag.getValues())
+                protocol = diag.topicMenu.saveProtocol()
+                console = Console(topics=protocol)
                 self.windows.append(console)
                 console.show()
         else:
@@ -118,13 +128,12 @@ class GUI(QWidget):
 
     def handleConnect(self):
         if isinstance(self.comsTerm.device, BaseDevice):
-            err = QMessageBox.information(self, "Info", f"Already Connected to {self.comsTerm.device.info.name}")
+            err = QMessageBox.information(self, "Info", f"Already Connected")
         else:
-            self.comsTerm.newDevice(self.deviceCon.getValues())        
+            self.comsTerm.newDevice(self.deviceCon.getValues())
+            self.devLabel.setText(f"Device : Connected")        
                
  
-
-
     def handelDisconnect(self):
         if isinstance(self.comsTerm.device, BaseDevice) == False:
             err = QMessageBox.information(self, "Info", "No Connections")

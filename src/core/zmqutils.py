@@ -121,14 +121,14 @@ class ZmqBridgeQt(QObject):
     def _run(self):
         self.log.info(f"Started ZmqBridge I/O Thread")
         self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
-        self.subscriber.addTopicSub("")
         
         self.subscriber.connect()
         
         while not self.workerIO.stopEvent.is_set():
             try:
                 topic, msg = self.subscriber.receive()
-                self.msgSig.emit((topic,msg))
+                if((topic or msg) != ""):
+                    self.msgSig.emit((topic,msg))
                 
             except Exception as e:
                 self.log.error(f"Exception in ZmqBridgeQt {e}")

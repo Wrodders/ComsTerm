@@ -47,13 +47,13 @@ class BaseDevice():
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
 
-        self.cmdMap.registerTopic(topicID = 'a', topicName="ID", topicFmt="", delim="")
-        self.cmdMap.registerTopic(topicID = 'b', topicName="RESET", topicFmt="d:d", delim=":")
+        self.cmdMap.registerTopic(topicID = 'a', topicName="ID", topicArgs=[], delim="")
+        self.cmdMap.registerTopic(topicID = 'b', topicName="RESET", topicArgs=[], delim="")
 
-        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicFmt="c:c", delim=":")
-        self.pubMap.registerTopic(topicID = 'b', topicName="ERROR", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = 'd', topicName="DEBUG", topicFmt="s", delim="")
+        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicArgs=["CMDID", "RETVAL"], delim=":")
+        self.pubMap.registerTopic(topicID = 'b', topicName="ERROR", topicArgs=[], delim="")
+        self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicArgs=[], delim="")
+        self.pubMap.registerTopic(topicID = 'd', topicName="DEBUG", topicArgs=[], delim="")
 
 
 

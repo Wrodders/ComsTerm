@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple
 
 from core.SerialDevice import SerialDevice, SerialInfo
 from core.ZmqDevice import ZmqDevice, ZmqInfo
-from core.SimulatedDevice import SimulatedDevice
+from core.SimulatedDevice import SimulatedDevice, SimInfo
 
 from core.device import Devices, DeviceInfo
 
@@ -34,7 +34,10 @@ class ComsTerm():
     def newDevice(self, deivceInfo: DeviceInfo):
         if isinstance(deivceInfo, SerialInfo):
             self.device = SerialDevice(deivceInfo)
+        elif isinstance(deivceInfo, SimInfo):
+            self.device = SimulatedDevice(deivceInfo)
             
+        if(isinstance(self.device, BaseDevice)):
             if self.device._start() == False:
                 del(self.device)
                 self.device = None

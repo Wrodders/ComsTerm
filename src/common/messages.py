@@ -1,5 +1,5 @@
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
 
@@ -42,21 +42,27 @@ Topics: Devices Publish Data over topics.
 class Topic:
     ID : str = "" # Topics ID
     name : str = "" # Topics Name
-    fmt : str = "" # Topics Data Format 
-    delim : str = "," # Data Argument Delimiter
+    args: List[str] = field(default_factory=list)
+    delim : str = ":" # Data Argument Delimiter
     nArgs : int = 0 # Number of Arguments in Topics Data
 
 class TopicMap:
     def __init__(self): 
         self.topics: Dict[str, Topic] = {}
 
-    def getFormatByName(self, name: str) -> str:
+    def getTopicNameFormat(self, name: str) -> tuple[str, list]:
         topic = self.topics.get(name)
-        return topic.fmt if topic else ""
+        if isinstance(topic, Topic):
+            return (topic.delim, topic.args)
+        else:
+            return (str(), list())
 
-    def getFormatByID(self, ID: str) -> str:
+    def getTopicIDFormat(self, ID: str)-> tuple[str, list]:
         topic = self.topics.get(ID)
-        return topic.fmt if topic else ""
+        if isinstance(topic, Topic):
+            return (topic.delim, topic.args)
+        else:
+            return (str(), list())
 
     def getNameByID(self, ID: str) -> str:
         
@@ -71,13 +77,15 @@ class TopicMap:
     def getTopicNames(self) -> List[str]:
         
         return list(set([topic.name for topic in self.topics.values()]))
+    
 
-    def registerTopic(self, topicID : str, topicName: str, topicFmt: str, delim: str):
+
+    def registerTopic(self, topicID : str, topicName: str, topicArgs: List[str], delim: str):
         if delim != "":
-            numArgs = len(topicFmt.split(delim))
+            numArgs = len(topicArgs)
         else:
             numArgs = 0
-        newTopic = Topic(ID=topicID, name=topicName, fmt=topicFmt, delim=delim, nArgs= numArgs)
+        newTopic = Topic(ID=topicID, name=topicName, args=topicArgs, delim=delim, nArgs= numArgs)
         self.topics[newTopic.name] = newTopic
         self.topics[newTopic.ID] = newTopic
     

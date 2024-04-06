@@ -23,14 +23,13 @@ class SimInfo(DeviceInfo):
                 Sends MessageFrames To the Qt Event loop via pyqtSignal. 
 """
 class SimulatedDevice(BaseDevice):
-    def __init__(self, rate: float):
+    def __init__(self, deviceInfo: SimInfo):
         super().__init__()        
         # Register Device Topics
-        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
-        self.pubMap.registerTopic(topicID='g', topicName="ACCEL", topicFmt="f:f:f:f", delim=":")
-
+        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
+        self.pubMap.registerTopic(topicID = 'g', topicName="LINE", topicArgs=["X", "Y","Z" ], delim=":")
         #Simulated only parameters
-        self.rate = rate # publish rate in seconds
+        self.info = deviceInfo
         self.topicGenFuncMap = {
             'LINE' : self._generate_line_data,
             'INFO' : self._generate_word_data,
@@ -63,14 +62,14 @@ class SimulatedDevice(BaseDevice):
                 log.error(f"Exception in Simulated Cmd :{e}")
                 break
 
-            time.sleep(self.rate)  
+            time.sleep(self.info.rate)  
 
         log.info("Exit Simulated Interface I/O Thread")
         return # exit thread
     
     # Private Functions
     def _generate_line_data(self) -> str:
-        return ':'.join(map(str, [round(random.uniform(0.0, 1.0), 3) for _ in range(5)]))
+        return ':'.join(map(str, [round(random.uniform(0.0, 1.0), 3) for _ in range(3)]))
     
     def _generate_accel_data(self) -> str:
         return ':'.join(map(str, [round(random.uniform(-1.0, 1.0),3) for _ in range(3)]))

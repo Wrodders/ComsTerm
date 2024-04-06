@@ -8,10 +8,13 @@ import matplotlib.animation as animation
 
 
 from core.device import TopicMap, Worker
+from core.zmqutils import ZmqBridgeQt
 from core.ZmqDevice import ZmqSub, Transport, Endpoint
 from common.logger import getmylogger
-
+from common.utils import TopicMenu
 from collections import deque , defaultdict
+
+from typing import Tuple
 
 plt.style.use('dark_background')
 
@@ -28,45 +31,56 @@ class BasePlot(QFrame):
         """Constructor method for BasePlot class."""
         super().__init__()
         self.log = getmylogger(__name__)
-        self.workerIO = Worker(self._run)
-        self.sub = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
-        self.dataSeries = defaultdict(deque)
+        self.zmqBridge = ZmqBridgeQt() 
 
-    def _run(self):
-        """
-        Acquire data over zmq socket, push data to relevant ring buffers dQueue
-        """
-        while True:
-            topic, data = self.sub.receive()  # Assuming `receive` method to receive topic and data from ZMQ
-            if topic:
-                self.dataSeries[topic].append(data)
+        self.zmqBridge.msgSig.connect(self._updateData)
+        self.zmqBridge.workerIO._begin()
+
+    @QtCore.pyqtSlot(tuple)
+    def _updateData(self, msg: tuple[str, str]):
+        raise NotImplementedError("Subclasses must implement updateData method")
+
 
 
 class LinePlot(BasePlot):
     """Class for line plotting."""
-    def __init__(self, yrange: tuple[float, float], xrange: int, protocol: list[str]):
+    def __init__(self, yrange: tuple[float, float], xrange: int, protocol: tuple[str, ...]):
         """Constructor method for LinePlot class."""
-        super().__init__()
+        super().__init__()  
+        self.x_len = xrange
+        self.y_range = yrange
+        self.protocol = protocol
+        self.dataSet = dict()
+        self.lines = list()
+
 
         self.initUI()
         self.connectSignals()
 
-        self.protocol = protocol
-    
-        # Create a figure and axis for the plot
-        self.x_len = xrange
-        self.y_range = yrange
+    def closeEvent(self, event):
+        """Event handler for closing the console.
+
+        Args:
+            event (QCloseEvent): The close event.
+        """
+        self.log.debug(f"Closing Plot {self.protocol}")
+        self.zmqBridge.workerIO._stop()  # stop device thread
+        event.accept()
+
+
+
+    def initUI(self):
+        """Initializes the user interface."""
+            # Create a figure and axis for the plot
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1,1,1)
-        self.lines = [] 
-
-        self.dataSet = {}
 
         # Initialize the plot
         self.xs = list(range(0, self.x_len)) # time series (x-axis)
         self.ax.set_ylim(self.y_range) 
 
         for label in self.protocol:
+            self.zmqBridge.subscriber.addTopicSub(label)
             self.dataSet[label] = [0] * self.x_len  # zero out data values array
             line, = self.ax.plot(self.xs, self.dataSet[label], label=label )  # create a line on the plot
             self.lines.append(line)
@@ -74,8 +88,7 @@ class LinePlot(BasePlot):
         # matplotlib timer animation
         self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), interval=200, blit=False, cache_frame_data=False)
 
-    def initUI(self):
-        """Initializes the user interface."""
+
         self.canvas = FigureCanvas(self.fig)
         self.settingsB = QPushButton("Plot Settings")
         self.cursorsB = QPushButton("Cursors")
@@ -123,15 +136,12 @@ class LinePlot(BasePlot):
 
 
     @QtCore.pyqtSlot(tuple)
-    def _updateData(self, msg: tuple[str, str]):
+    def _updateData(self, msg: tuple[tuple, str]):
        # Grabs msg data from the worker thread
         topic, data = msg
-
         try:
-            for i, name in enumerate(self.protocol):
-                if name != "":
-                    argData = float(data.split(":")[i]) # extract data arguments from topic header
-                    self.dataSet[name].append(argData)   
+        
+            self.dataSet[topic].append(data)   
         except Exception as e:
            self.log.error(f"Exception in UpdateData:{e}")
            pass
@@ -145,73 +155,36 @@ class LinePlot(BasePlot):
 
 class CreatePlot(QDialog):
     """Dialog for creating a new plot."""
-    def __init__(self):
+
+    def __init__(self, topicMap: TopicMap):
         """Constructor method for CreatePlot class."""
         super().__init__()
+        self.pubMap = topicMap
         self.initUI()
 
         self.maxDataSeries = 8
 
     def initUI(self):
         """Initializes the user interface."""
-        self.log = getmylogger(__name__)
         self.setWindowTitle("New Plot")
         self.setMinimumSize(600, 300)
 
-        self.seriesInfo = defaultdict(dict) # holds the info about the requested topic data series to plot
-        self.plotCombo = QComboBox()
-        self.plotCombo.addItems(["Line Plot", "Bar Plot", "Scatter Plot"])
-        self.newSeriesB = QPushButton("Add Data Series")
-        self.newSeriesB.clicked.connect(self.newSeriesHandle)
-        self.newSeriesB.setMaximumWidth(150)
-        self.plotCombo.setMaximumWidth(200)
+        self.grid = QGridLayout()
 
-        self.saveConfigB = QPushButton("Save Plot Config")
-        self.saveConfigB.setMaximumWidth(200)
+        self.topicMenu = TopicMenu(self.pubMap)
 
-        hBox = QHBoxLayout()
-        hBox.addWidget(self.plotCombo)
-        hBox.addWidget(self.newSeriesB)
-
-        self.table = QTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Topic Path", "Series Name", "Data Type", "Color", ""])
-
-        # Dialogue Accept
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel 
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
         self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.validateInput)
+        self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        vBox = QVBoxLayout()
-        vBox.addLayout(hBox)
-        vBox.addWidget(self.table)
-        vBox.addWidget(self.saveConfigB)
-        vBox.addWidget(self.buttonBox)
-        self.setLayout(vBox)
+        self.grid.addWidget(self.topicMenu, 0, 0, 4, 2)
+        self.grid.addWidget(self.buttonBox, 4, 0, 1, 2)
+        self.setLayout(self.grid)
 
-    def newSeriesHandle(self):
-        """Handles adding a new data series."""
-        rowCount = self.table.rowCount()
-        if rowCount >= self.maxDataSeries:
-            self.log.error(f"Max number of Data Series per plot is {self.maxDataSeries}")
-            return
-        
-        self.table.insertRow(rowCount)
-        colorCombo = QComboBox()
-        colors = ["Black", "Blue", "Green", "Red", "Yellow", "Orange", "Pink", "Cyan", "Magenta"]
-        colorCombo.addItems(colors)
-        colorCombo.setCurrentIndex(rowCount)
-        self.table.setCellWidget(rowCount, 3, colorCombo)
+    
 
-        removeB = QPushButton("Remove")
-        removeB.clicked.connect(lambda _, row=rowCount: self.removeSeries(row))
-        self.table.setCellWidget(rowCount, 4, removeB)
 
-    def removeSeries(self, row):
-        """Removes a data series."""
-        self.table.removeRow(row)
-
-    def validateInput(self):
-        """Validates user input."""
-        pass

@@ -40,6 +40,7 @@ class DeviceConfig(QWidget):
         self.setMinimumWidth(350)
 
         self.serialConfig = SerialConfig()
+        self.simConfig = SimConfig()
         self.zmqConfig = ZMQConfig()
         self.tcpConfig = TCPConfig()
         self.udpConfig = UDPConfig()
@@ -74,7 +75,11 @@ class DeviceConfig(QWidget):
             port = self.serialConfig.portCB.currentText()
             baud = self.serialConfig.baudRate.currentText()
             devInfo = SerialInfo(name="1", port=port, baudRate=int(baud))
-        
+
+        elif self.conDeviceCB.currentText() == Devices.SIM.name:
+            rate = self.simConfig.rateCB.currentText()
+            devInfo = SimInfo(rate=int(rate))
+            
         return devInfo
 
 
@@ -175,5 +180,23 @@ class ZMQConfig(QFrame):
         layout = QGridLayout()
         layout.addWidget(QLabel("Socket Endpoint:"), 0, 0)
         layout.addWidget(QComboBox(), 0, 1)
+
+        self.setLayout(layout)
+
+
+class SimConfig(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.setMaximumWidth(350)
+        self.setFrameShape(self.Shape.StyledPanel)
+        self.setFrameShadow(self.Shadow.Plain)
+        self.rateCB = QComboBox()
+        self.rateCB.addItems(["1", "10", "100"])
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Rate:"), 0, 0)
+        layout.addWidget(self.rateCB, 1, 1)
 
         self.setLayout(layout)
