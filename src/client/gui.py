@@ -18,13 +18,15 @@ from core.SimulatedDevice import SimulatedDevice
 
 from core.device import Devices
 
+from core.comsTerm import ComsTerm
+
 class GUI(QWidget):
     """
-    Main Process Interaction GUI Pr
+    Main Process Interaction GUI 
     Handles creation of new GUI submodules and IO Threads
 
-    Each Device has its own IO thread
-    GUI Communicated to device
+    Each Window has its own IO thread
+    GUI Communicated to device through ComsTerm 
     """
     
     def __init__(self):
@@ -34,7 +36,7 @@ class GUI(QWidget):
 
         self.setWindowTitle("ComsTermV5")
 
-        self.device = None
+        self.comsTerm = ComsTerm()
         self.windows = list()
      
 
@@ -45,8 +47,7 @@ class GUI(QWidget):
         """Event handler for closing the GUI."""
         self.log.info("Closing GUI")
         [win.close() for win in self.windows]
-        if isinstance(self.device, BaseDevice):
-            self.device._stop()
+        self.comsTerm.stopDevice()
         event.accept()
 
     def initUI(self): 
@@ -57,11 +58,10 @@ class GUI(QWidget):
         self.grid.setContentsMargins(10, 10, 10, 10)
         self.setLayout(self.grid)
         # Create Widgets
+        self.devLabel = QLabel("Device: ")
         self.commander = Commander()
         self.settings = SettingsMenu()
         self.deviceCon = DeviceConfig()
-
-
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self.commander, "Commander")
@@ -76,6 +76,7 @@ class GUI(QWidget):
         # Add to Layout
         self.grid.addWidget(self.newPlotB, 0, 0)
         self.grid.addWidget(self.newConsoleB, 0, 1)
+        self.grid.addWidget(self.devLabel, 0, 2)
         self.grid.addWidget(self.tabs, 1, 0, 4, 4)
         
     def connectSignals(self):
@@ -95,56 +96,43 @@ class GUI(QWidget):
        
     def newConsoleHandle(self):
         """Handles creation of a new console."""
-        if(self.device == None):
+        if(isinstance(self.comsTerm.device, BaseDevice)):
+            diag = ConfigConsole(self.comsTerm.device.pubMap)
+            if diag.exec() == True:
+                console = Console(topic=diag.getValues())
+                self.windows.append(console)
+                console.show()
+        else:
             err = QMessageBox.critical(self, "Error", "No Device Connected")
-            return
-        
-        diag = ConfigConsole(self.device.pubMap)
-        if diag.exec() == True:
-            console = Console(topic=diag.getValues())
-            self.windows.append(console)
-            console.show()
+            
     
     def sendCmdHandle(self):
         """Handles sending a command."""
         text = self.commander.cmdEntry.text()
-        self.device[0].sendCmd(text)
+        if(isinstance(self.comsTerm.device, BaseDevice)):
+            self.comsTerm.device.sendCmd(text)
+        else:
+            err = QMessageBox.critical(self, "Error", "No Device Connected")
+
 
 
     def handleConnect(self):
-
-        if self.device != None:
-            err = QMessageBox.information(self, "Info", "Already Connected")
+        if isinstance(self.comsTerm.device, BaseDevice):
+            err = QMessageBox.information(self, "Info", f"Already Connected to {self.comsTerm.device.info.name}")
         else:
-            if self.deviceCon.conDeviceCB.currentText() == Devices.SERIAL.name:
-                self.device = SerialDevice()
-                portPath = self.deviceCon.serialConfig.getPort()
-                if portPath == "":
-                    err = QMessageBox.critical(self, "Error", "No Ports Found")
-                    return
-                baud = self.deviceCon.serialConfig.getBaud()
-                if self.device.connect(portPath, baud ):
-                    self.device._start()
-            elif self.deviceCon.conDeviceCB.currentText() ==Devices.SIM.name:
-                pass
-            elif self.deviceCon.conDeviceCB.currentText() == Devices.BLE.name:
-                raise NotImplementedError("BLE")
-            elif self.deviceCon.conDeviceCB.currentText() == Devices.TCP.name:
-                raise NotImplementedError("TCP")
-            elif self.deviceCon.conDeviceCB.currentText() == Devices.UDP.name:
-                raise NotImplementedError("UDP")
-            elif self.deviceCon.conDeviceCB.currentText() == Devices.ZMQ.name:
-                raise NotImplementedError("ZMQ")
+            self.comsTerm.newDevice(self.deviceCon.getValues())        
+               
+ 
 
 
     def handelDisconnect(self):
-
-        if self.device == None:
+        if isinstance(self.comsTerm.device, BaseDevice) == False:
             err = QMessageBox.information(self, "Info", "No Connections")
         else:
-            self.device._stop()
-            del(self.device)
-            self.device = None
+            self.comsTerm.stopDevice()
+            self.devLabel.setText("Device :")
+            self.deviceCon.connectBtn.setDisabled(False)
+
         
 
 

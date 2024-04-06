@@ -3,9 +3,10 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtWidgets import QWidget
 
-from core.device import Devices
-
-
+from core.device import Devices, DeviceInfo
+from core.SerialDevice import SerialInfo
+from core.SimulatedDevice import SimInfo
+from core.ZmqDevice import ZmqInfo
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 from common.utils import scanUSB
@@ -65,6 +66,19 @@ class DeviceConfig(QWidget):
 
     def updateDeviceStack(self):
         self.stackLayout.setCurrentIndex(self.conDeviceCB.currentIndex())
+
+
+    def getValues(self) -> DeviceInfo:
+
+        if self.conDeviceCB.currentText() == Devices.SERIAL.name:
+            port = self.serialConfig.portCB.currentText()
+            baud = self.serialConfig.baudRate.currentText()
+            devInfo = SerialInfo(name="1", port=port, baudRate=int(baud))
+        
+        return devInfo
+
+
+
 
 
 

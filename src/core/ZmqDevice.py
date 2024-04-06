@@ -1,7 +1,13 @@
-from core.device import BaseDevice
+from core.device import BaseDevice, DeviceInfo
 from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
 
+from dataclasses import dataclass
 from common.logger import getmylogger
+
+@dataclass
+class ZmqInfo(DeviceInfo):
+    transport : Transport  = Transport.IPC
+    endpoint : Endpoint = Endpoint.COMSTERM
 
 
 """
@@ -15,8 +21,9 @@ class ZmqDevice(BaseDevice):
         self.log = getmylogger(__name__)
         self.socketAddr = socketAddress
         
-    def _start(self):
+    def _start(self) -> bool:
         self.workerIO._begin()
+        return True
 
     def _run(self):
         '''Execute Thread'''
@@ -24,7 +31,7 @@ class ZmqDevice(BaseDevice):
         self.sub  = ZmqSub(transport=Transport.IPC, endpoint=Endpoint.COMSTERM)
         self.sub.connect()
         self.sub.addTopicSub("")
-        self.log.info(f"Started ZMQ Interface")
+        self.log.debug(f"Started ZMQ Interface")
         while (not self.workerIO.stopEvent.is_set()):
             try:
                 topic, msg = self.sub.socket.recv_multipart()
@@ -35,5 +42,5 @@ class ZmqDevice(BaseDevice):
                 break
         
         self.sub.close() 
-        self.log.info("exit Zmq Bridge QT I/O Thread")  
+        self.log.debug("Exit Zmq Bridge QT I/O Thread")  
         return

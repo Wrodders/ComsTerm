@@ -54,8 +54,6 @@ class BaseDevice():
         self.pubMap.registerTopic(topicID = 'b', topicName="ERROR", topicFmt="s", delim="")
         self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicFmt="s", delim="")
         self.pubMap.registerTopic(topicID = 'd', topicName="DEBUG", topicFmt="s", delim="")
-        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicFmt="f:f:f:f:f", delim=":")
-        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
 
 
 
@@ -96,7 +94,7 @@ class BaseDevice():
     def _run(self):
         raise NotImplementedError("Subclasses must implement _run method")
     
-    def _start(self):
+    def _start(self) -> bool:
         raise NotImplementedError("Subclasses must implement start method")
     
     def _stop(self):

@@ -2,9 +2,18 @@ import random, time, lorem
 from queue import Empty
 
 from common.logger import getmylogger
-from core.device import BaseDevice
+from core.device import BaseDevice, DeviceInfo, Devices
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 log = getmylogger(__name__)
+
+
+@dataclass
+class SimInfo(DeviceInfo):
+    rate : float = 0.1
+    
 
 
 """
@@ -17,8 +26,8 @@ class SimulatedDevice(BaseDevice):
     def __init__(self, rate: float):
         super().__init__()        
         # Register Device Topics
-        self.pubMap.registerTopic(topicID='3', topicName="LINE", topicFmt="f:f:f:f", delim=":")
-
+        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
+        self.pubMap.registerTopic(topicID='g', topicName="ACCEL", topicFmt="f:f:f:f", delim=":")
 
         #Simulated only parameters
         self.rate = rate # publish rate in seconds
@@ -28,8 +37,9 @@ class SimulatedDevice(BaseDevice):
             'ACCEL' : self._generate_accel_data,
         }
     
-    def _start(self):
+    def _start(self) -> bool:
         self.workerIO._begin()
+        return True
     
     def _run(self):
         '''Execute Thread'''

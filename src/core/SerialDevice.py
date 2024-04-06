@@ -1,12 +1,23 @@
 import serial, serial.tools.list_ports
 from queue import Empty
 
-from core.device import BaseDevice, MsgFrame
+from core.device import BaseDevice, MsgFrame, DeviceInfo, Devices
 from common.logger import getmylogger
 from common.utils import scanUSB
 
 
 log = getmylogger(__name__)
+
+
+
+from dataclasses import dataclass
+
+@dataclass
+class SerialInfo(DeviceInfo):
+    devType : Devices = Devices.SERIAL
+    port : str = ""
+    baudRate : int = 115200
+
 
 
 '''
@@ -17,28 +28,35 @@ log = getmylogger(__name__)
                 sends data to Qt Event loop via pyqtSignal.
 '''
 class SerialDevice(BaseDevice):
-    def __init__(self):
+    def __init__(self, info: SerialInfo):
         super().__init__()
-        self.port = serial.Serial() # Data input
+        self.info = info
+        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicFmt="f:f:f:f:f", delim=":")
+        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicFmt="f:f:f", delim="")
 
-    def _start(self):
+        self.port = serial.Serial() # Data input
+        self.connect()
+
+    def _start(self) -> bool:
         """
         @Brief: Starts Worker IO Thread to read and write from serial port
         @Description: Scans for usb ports and connects to the first one
         """        
         if self.port.is_open == False:
             log.error(f"Port {self.port.name} not open")
-            log.warning(f"Serial I/O Thread not started")
-
-
+            log.debug(f"Serial I/O Thread not started")
+            return False
+        
+        self.info.status = True
         self.workerIO._begin()  
+        return True
         
 
     def _run(self):
         """
         @Brief: Serial IO Thread
         """
-        log.info("Started Serial Interface I/O Thread")
+        log.debug("Started Serial Interface I/O Thread")
         self.publisher.bind()
         while (not self.workerIO.stopEvent.is_set()) and self.port.is_open:
             try:
@@ -48,7 +66,7 @@ class SerialDevice(BaseDevice):
                 log.error(f"Unexpected exception in thread loop: {e}")
                 break
 
-        log.info('Exit Serial Interface I/O Thread')
+        log.debug('Exit Serial Interface I/O Thread')
         self.disconnect()
     
     def readDevice(self):
@@ -92,15 +110,15 @@ class SerialDevice(BaseDevice):
     """
     ************** PUBLIC FUNCTIONS *************************
     """    
-    def connect(self, portNum : str, baud: int) -> bool:
+    def connect(self) -> bool:
         '''Connect to serial device and start reading'''
-        log.info(f"Connecting Device to: {portNum}, At Baud: {baud}")
+        log.info(f"Connecting Device to: {self.info.port}, At Baud: {self.info.baudRate}")
         if self.port.is_open == True:
             log.error('Connect Error: Serial Port Already Open')
             return False
         
-        self.port.port = portNum
-        self.port.baudrate = baud
+        self.port.port = self.info.port
+        self.port.baudrate = self.info.baudRate
         self.port.timeout = 0.1
         try:
             self.port.open()
@@ -108,7 +126,7 @@ class SerialDevice(BaseDevice):
             log.error(f"Exception in Serial connect:{e} ")
             return False
         else:
-            log.info(f'Connection to {portNum} Successful')
+            log.info(f'Connection to {self.info.port} Successful')
             return True
     
     def disconnect(self) -> bool:
