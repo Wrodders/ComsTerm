@@ -88,13 +88,13 @@ class SerialDevice(BaseDevice):
             recvMsg = MsgFrame.extractMsg(msg)        
             topic = self.pubMap.getTopicByID(recvMsg.ID)
             if isinstance(topic, Topic):
-                if topic.name != "":  
+                if topic.name != "": 
                     delim , args = self.pubMap.getTopicFormat( topic.name)
                     msgArgs = recvMsg.data.split(delim)
                     msgSubTopics = [( topic.name + "/" + arg) for arg in args]
                     [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
         except UnicodeDecodeError as e:
-            log.warning(f"{e}")
+            log.warning(f"{e} {msgPacket}")
             return 
         except Exception as e:
             log.error(f"Exception in Serial Read: {e}")
@@ -107,8 +107,8 @@ class SerialDevice(BaseDevice):
         #Service CmdMsg Queue And Transmit MsgFrame over Serial
         try:
             cmdPacket = self.cmdQueue.get_nowait()
-            print(cmdPacket)
-            #self.port.write(cmdPacket) # output Data
+            print(f"CCMD: {cmdPacket}")
+            self.port.write(cmdPacket.encode()) # output Data
         except Empty:
             pass
         except Exception as e:

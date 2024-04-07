@@ -33,7 +33,7 @@ class Console(QWidget):
         
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
-        print(topics)
+
         [self.zmqBridge.subscriber.addTopicSub(t) for t in topics]
 
     def closeEvent(self, event):
@@ -116,16 +116,4 @@ class ConfigConsole(QDialog):
         self.setLayout(vBox)
 
 
-    def getValues(self) -> tuple[str, ...]:
-        """Returns the value entered in the console topic field.
 
-        Returns:
-            str: The topic entered in the console topic field.
-        """
-        try:
-            topic = self.consoleTopic.currentText()
-            print(topic)
-        except ValueError as e:
-            self.log.error(f"Error in getValues {e}")
-
-        return 
