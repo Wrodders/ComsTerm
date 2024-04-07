@@ -15,11 +15,16 @@
     "cSpell.words": [
         "baudrate",
         "bytesize",
+        "COMSTERM",
         "connectionlayout",
         "dataline",
         "Dfault",
         "Dockable",
+        "INPROC",
         "outputconsole",
-        "serialutil"
+        "requeiremtes",
+        "serialutil",
+        "unsub",
+        "zmqutils"
     ]
 }

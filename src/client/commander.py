@@ -3,93 +3,24 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
 
-from logger import getmylogger
-
-log = getmylogger(__name__)
+from common.logger import getmylogger
 
 
-class Console(QWidget):    
-    def __init__(self, topic : str):
-        super().__init__()
-        self.topic = topic
-        self.initUI()   
+class Commander(QWidget):
+    """Widget for sending commands."""
 
-    def initUI(self):
-        self.setMinimumWidth(300)
-        # Create  Layout
-        self.vBox = QVBoxLayout()
-        self.vBox.setContentsMargins(5, 5, 5, 5)
-        self.setLayout(self.vBox)
-
-        self.console = QTextEdit()
-        self.console.setReadOnly(True)
-        self.console.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        self.console.setAcceptRichText(True)
-        self.console.setStyleSheet("background-color: black; color: green;")
-
-        # Add Widgets to Layout
-        self.vBox.addWidget(self.console)
-
-    def clearConsole(self):
-        '''Clear Console'''
-        self.console.clear()
-
-    @QtCore.pyqtSlot(tuple) 
-    def _updateData(self, msg : tuple[str, str]):
-        '''Update Console with new data'''
-        if(msg[0] != self.topic): # filter on topic
-            return
-        if self.console.document().lineCount() > 200:
-            self.console.clear()
-
-        self.console.append(msg[1]) # add data to console 
-
-
-
-class CreateConsole(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("New Console")
-
-        topicLabel = QLabel("Topic")
-        self.consoleTopic = QLineEdit()
-        form = QFormLayout()
-        form.addRow(topicLabel, self.consoleTopic)
-
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.validateInput)
-        self.buttonBox.rejected.connect(self.reject)
-        vBox = QVBoxLayout()
-        vBox.addLayout(form)
-        vBox.addWidget(self.buttonBox)
-        self.setLayout(vBox)
-
-
-    def validateInput(self):
-        if isinstance(self.consoleTopic, QLineEdit):
-            if self.consoleTopic.text() == "":
-                errMsg = QMessageBox.critical(self, "Error", "All Fields are Mandatory")
-                return
-        self.accept()
-
-    def getValues(self) -> str:
-        try:
-            topic = self.consoleTopic.text()
-        except ValueError as e:
-            log.error(f"Error in getValues {e}")
-
-        return str(topic)
-
-
-class CommandFrame(QFrame):
     cmdSendSig = QtCore.pyqtSignal(str)
+
     def __init__(self):
+        """Constructor method for Commander class."""
         super().__init__()
+
+        self.log = getmylogger(__name__)
         self.initUI()
         
     def initUI(self):
-        self.setContentsMargins(0,0,0,0)
+        """Initializes the user interface."""
+        self.setContentsMargins(0, 0, 0, 0)
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         self.console.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
@@ -98,37 +29,44 @@ class CommandFrame(QFrame):
 
         self.cmdEntry = QLineEdit()
         self.cmdEntry.setMinimumWidth(100)
+        self.cmdEntry.setMinimumHeight(25)
         self.cmdEntry.textChanged.connect(self.enableSend)
         self.sendB = QPushButton("Send")
         self.sendB.setMaximumWidth(100)
 
         self.grid = QGridLayout()
         self.grid.addWidget(self.console, 0, 0, 2, 2)
-        self.grid.addWidget(self.cmdEntry,2,0 )
-        self.grid.addWidget(self.sendB, 2,1)
+        self.grid.addWidget(self.cmdEntry, 2, 0)
+        self.grid.addWidget(self.sendB, 2, 1)
         self.setLayout(self.grid)
 
     @QtCore.pyqtSlot(str)
-    def _updateData(self, msg : str):
-        '''Update Console with new data'''
+    def _updateData(self, msg: str):
+        """Updates the console with new data.
+
+        Args:
+            msg (str): The message to be displayed in the console.
+        """
         if msg == "":
             return
         if self.console.document().lineCount() > 200:
             self.console.clear()
 
-        self.console.append(msg) # add data to console 
+        self.console.append(msg)  # Add data to console 
 
     def enableSend(self):
-        '''Stops Spamming Send'''
+        """Enables or disables the send button based on text entry."""
         if self.cmdEntry.text():
             self.sendB.setEnabled(True)
         else: 
             self.sendB.setEnabled(False)
 
 
-           
 class JoyPad(QWidget):
+    """Widget representing a joystick pad."""
+
     def __init__(self):
+        """Constructor method for JoyPad class."""
         super().__init__()
 
         self.outer_radius = 60
@@ -139,6 +77,7 @@ class JoyPad(QWidget):
         self.setFixedSize(self.outer_radius * 2, self.outer_radius * 2)
 
     def paintEvent(self, event):
+        """Paint event handler."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
@@ -151,6 +90,7 @@ class JoyPad(QWidget):
         painter.drawEllipse(self.inner_position, self.inner_radius, self.inner_radius)
 
     def mouseMoveEvent(self, event):
+        """Mouse move event handler."""
         new_position = event.pos()
 
         # Calculate distance from new position to the center
@@ -162,11 +102,13 @@ class JoyPad(QWidget):
             self.update()
 
     def mouseReleaseEvent(self, event):
+        """Mouse release event handler."""
         # Reset inner circle to the center when mouse is released
         self.inner_position = self.center
         self.update()
 
     def updatePos(self, newPos):
+        """Update the position of the inner circle."""
         # Calculate distance from new position to the center
         distance = QPoint(newPos - self.center).manhattanLength()
 
@@ -176,10 +118,11 @@ class JoyPad(QWidget):
             self.update()
 
     def getVal(self):
+        """Get the current position."""
         return self.inner_position
 
-
     def keyPressEvent(self, event):
+        """Key press event handler."""
         step = 5
         print("A")
         currentPos = self.getVal()
@@ -196,14 +139,18 @@ class JoyPad(QWidget):
             newPos = currentPos + QPoint(step, 0)
             self.updatePos(newPos)
 
+
 class Speedometer(QWidget):
+    """Widget representing a speedometer."""
 
     def __init__(self):
+        """Constructor method for Speedometer class."""
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        self.setContentsMargins(0,0,0,0)
+        """Initializes the user interface."""
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.speedLCD = QLCDNumber()
         self.speedLCD.setMaximumSize(100, 50)
@@ -211,39 +158,53 @@ class Speedometer(QWidget):
         self.speedLabel = QLabel("Speed: m/s")
 
         self.vBox = QVBoxLayout()
-   
         self.vBox.addWidget(self.speedLCD)
         self.vBox.addWidget(self.speedLabel)
         self.setLayout(self.vBox)
-    
-    def updateSpeed(self, val : float):
+
+    def updateSpeed(self, val: float):
+        """Update the speed value on the LCD display.
+
+        Args:
+            val (float): The speed value to be displayed.
+        """
         self.speedLCD.display(val)
 
+
 class Remote(QWidget):
+    """Widget representing a remote control interface."""
+
     def __init__(self):
+        """Constructor method for Remote class."""
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        self.setContentsMargins(0,0,0,0)
+        """Initializes the user interface."""
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.joyPad = JoyPad()
         self.speedometer = Speedometer()
         
         self.grid = QGridLayout()
-        self.grid.addWidget(self.joyPad, 0,0, 2,2)
-        self.grid.addWidget(self.speedometer, 0,2, 2,1)
+        self.grid.addWidget(self.joyPad, 0, 0, 2, 2)
+        self.grid.addWidget(self.speedometer, 0, 2, 2, 1)
         self.setLayout(self.grid)
 
-class ControlFrame(QFrame):
+
+class ControlFrame(QWidget):
+    """Widget representing the main control frame."""
+
     def __init__(self):
+        """Constructor method for ControlFrame class."""
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        self.setContentsMargins(0,0,0,0)
+        """Initializes the user interface."""
+        self.setContentsMargins(0, 0, 0, 0)
 
-        self.commander = CommandFrame()
+        self.commander = Commander()
         self.remote = Remote()
         self.tabs = QTabWidget()
         self.tabs.addTab(self.commander, "Commander")
@@ -252,4 +213,3 @@ class ControlFrame(QFrame):
         self.vBox = QVBoxLayout()
         self.vBox.addWidget(self.tabs)
         self.setLayout(self.vBox)
-        
