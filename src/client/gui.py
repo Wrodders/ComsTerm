@@ -120,7 +120,15 @@ class GUI(QWidget):
         """Handles sending a command."""
         text = self.commander.cmdEntry.text()
         if(isinstance(self.comsTerm.device, BaseDevice)):
-            self.comsTerm.device.sendCmd(text)
+            if text == "help":
+                devCmds = self.comsTerm.device.cmdMap.getTopicNames()
+            
+                for cmdName in devCmds:
+
+                    delim ,cmdArgs = self.comsTerm.device.cmdMap.getTopicFormat(cmdName)
+                    self.commander._updateData(f"{cmdName} {delim.join(cmdArgs)}") 
+            else:
+                self.comsTerm.device.sendCmd(text)
         else:
             err = QMessageBox.critical(self, "Error", "No Device Connected")
 

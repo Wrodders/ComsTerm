@@ -45,7 +45,7 @@ class TopicMenu(QFrame):
     def updateArgComboBox(self):
         """Update argument combo box based on the selected topic."""
         topicName = self.topicCB.currentText()
-        _, topicArgs = self.pubMap.getTopicNameFormat(topicName)
+        _, topicArgs = self.pubMap.getTopicFormat(topicName)
         self.argCb.clear()
         self.argCb.addItems(topicArgs)
 

@@ -47,32 +47,32 @@ class BaseDevice():
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
 
-        self.cmdMap.registerTopic(topicID = 'a', topicName="ID", topicArgs=[], delim="")
-        self.cmdMap.registerTopic(topicID = 'b', topicName="RESET", topicArgs=[], delim="")
+        self.cmdMap.register(topicName="ID", topicArgs=[], delim="")
+        self.cmdMap.register(topicName="RESET", topicArgs=[], delim="")
 
-        self.pubMap.registerTopic(topicID = 'a', topicName="CMD_RET", topicArgs=["CMDID", "RETVAL"], delim=":")
-        self.pubMap.registerTopic(topicID = 'b', topicName="ERROR", topicArgs=[], delim="")
-        self.pubMap.registerTopic(topicID = 'c', topicName="INFO", topicArgs=[], delim="")
-        self.pubMap.registerTopic(topicID = 'd', topicName="DEBUG", topicArgs=[], delim="")
+        self.pubMap.register(topicName="CMD_RET", topicArgs=["CMDID", "RETVAL"], delim=":")
+        self.pubMap.register(topicName="ERROR", topicArgs=[], delim="")
+        self.pubMap.register(topicName="INFO", topicArgs=[], delim="")
+        self.pubMap.register(topicName="DEBUG", topicArgs=[], delim="")
 
 
 
     def parseCmd(self, text: str) -> str:
-        cmdParts = text.split(" ", 1) # cmdName arguments
+        cmdParts = text.split("-", 1) # cmdName arguments
         cmdName = cmdParts[0] 
-        cmdTopic = self.cmdMap.topics.get(cmdName)
+        cmdTopic = self.cmdMap.getTopicByName(cmdName)
         if cmdTopic == None: # exit early if cmd name wrong 
             self.log.warning(f"Cmd Name; {cmdName} not found")
             return ""
 
-        fmt = cmdTopic.fmt # grab the topics protocol format string
+        args = cmdTopic.args # grab the topics protocol format string
         cmdArgs = cmdParts[1:] #extract arguments
         if cmdArgs == []:
             numArgs = 0
         else:
             numArgs = sum(1 for c in cmdArgs[0] if c == cmdTopic.delim) + 1 # num args = num delim + 1 
         if numArgs != cmdTopic.nArgs:
-            self.log.warning(f"Cmd syntax error: incorrect num args for {cmdName} {fmt}")
+            self.log.warning(f"Cmd syntax error: incorrect num args for {cmdName} {args}")
             return ""
 
         data = cmdTopic.delim.join(cmdArgs)  # Join arguments using delimiter

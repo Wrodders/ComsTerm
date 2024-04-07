@@ -26,8 +26,8 @@ class SimulatedDevice(BaseDevice):
     def __init__(self, deviceInfo: SimInfo):
         super().__init__()        
         # Register Device Topics
-        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
-        self.pubMap.registerTopic(topicID = 'g', topicName="LINE", topicArgs=["X", "Y","Z" ], delim=":")
+        self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
+        self.pubMap.register(topicName="LINE", topicArgs=["X", "Y","Z" ], delim=":")
         #Simulated only parameters
         self.info = deviceInfo
         self.topicGenFuncMap = {

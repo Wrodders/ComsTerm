@@ -46,46 +46,48 @@ class Topic:
     delim : str = ":" # Data Argument Delimiter
     nArgs : int = 0 # Number of Arguments in Topics Data
 
+@dataclass
 class TopicMap:
-    def __init__(self): 
-        self.topics: Dict[str, Topic] = {}
+    topics: Dict[str, Topic] = field(default_factory=dict)
+    namesToIds: Dict[str, str] = field(default_factory=dict)
+    numTopics = int()
 
-    def getTopicNameFormat(self, name: str) -> tuple[str, list]:
-        topic = self.topics.get(name)
-        if isinstance(topic, Topic):
-            return (topic.delim, topic.args)
+    def register(self, topicName: str, topicArgs: List[str], delim : str):
+        """Register a new topic"""
+        topicId = chr(ord('a') + self.numTopics)
+        if delim != "":
+            numArgs = len(topicArgs)
+        else:
+            numArgs = 0
+        topic = Topic(ID=topicId, name=topicName, args=topicArgs,delim=delim, nArgs=numArgs)
+        self.numTopics += 1
+        self.topics[topicId] = topic
+        self.namesToIds[topicName] = topicId
+
+    def getTopicByID(self, topic_id: str) -> Topic | None:
+        """Get topic by ID"""
+        return self.topics.get(topic_id)
+    
+    def getTopicByName(self, name: str) -> Topic | None:
+        """Get topic by name"""
+        topicId = self.namesToIds.get(name)
+        if topicId:
+            return self.topics[topicId]
+        return None
+
+    def getTopicFormat(self, name: str) -> tuple[str, list]:
+        topicId= self.namesToIds.get(name)
+        if topicId:
+            return (self.topics[topicId].delim, self.topics[topicId].args)
         else:
             return (str(), list())
-
-    def getTopicIDFormat(self, ID: str)-> tuple[str, list]:
-        topic = self.topics.get(ID)
-        if isinstance(topic, Topic):
-            return (topic.delim, topic.args)
-        else:
-            return (str(), list())
-
-    def getNameByID(self, ID: str) -> str:
         
-        topic = self.topics.get(ID)
-    
-        return topic.name if topic else ""
-    
-    def getIDByName(self, name:str) -> str:
-        topic = self.topics.get(name)
-        return topic.ID if topic else ""
-
     def getTopicNames(self) -> List[str]:
         
         return list(set([topic.name for topic in self.topics.values()]))
     
 
-
-    def registerTopic(self, topicID : str, topicName: str, topicArgs: List[str], delim: str):
-        if delim != "":
-            numArgs = len(topicArgs)
-        else:
-            numArgs = 0
-        newTopic = Topic(ID=topicID, name=topicName, args=topicArgs, delim=delim, nArgs= numArgs)
-        self.topics[newTopic.name] = newTopic
-        self.topics[newTopic.ID] = newTopic
+    def getTopics(self) -> List[Topic]:
+        return list(self.topics.values())
     
+

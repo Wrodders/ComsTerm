@@ -140,8 +140,7 @@ class LinePlot(BasePlot):
        # Grabs msg data from the worker thread
         topic, data = msg
         try:
-        
-            self.dataSet[topic].append(data)   
+            self.dataSet[topic].append(float(data))   
         except Exception as e:
            self.log.error(f"Exception in UpdateData:{e}")
            pass

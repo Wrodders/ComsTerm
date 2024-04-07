@@ -4,6 +4,7 @@ from queue import Empty
 from core.device import BaseDevice, MsgFrame, DeviceInfo, Devices
 from common.logger import getmylogger
 from common.utils import scanUSB
+from common.messages import Topic
 
 
 log = getmylogger(__name__)
@@ -31,8 +32,11 @@ class SerialDevice(BaseDevice):
     def __init__(self, info: SerialInfo):
         super().__init__()
         self.info = info
-        self.pubMap.registerTopic(topicID = 'e', topicName="MOTOR", topicArgs=["L", "R", "T", "V", "M", "B"], delim=":")
-        self.pubMap.registerTopic(topicID = 'f', topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
+
+        self.cmdMap.register(topicName="VEL", topicArgs=["L", "R"], delim=":")
+
+        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "R", "T", "V", "M", "B"], delim=":")
+        self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
 
         self.port = serial.Serial() # Data input
         self.connect()
@@ -82,12 +86,13 @@ class SerialDevice(BaseDevice):
                 return
             #Decode Message
             recvMsg = MsgFrame.extractMsg(msg)        
-            topic = self.pubMap.getNameByID(recvMsg.ID) # serial msgFrameTopic
-            if topic != "":  
-                delim , args = self.pubMap.getTopicNameFormat(topic)
-                msgArgs = recvMsg.data.split(delim)
-                msgTopics = [(topic + "/" + arg) for arg in args]
-                [self.publisher.send(msgTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+            topic = self.pubMap.getTopicByID(recvMsg.ID)
+            if isinstance(topic, Topic):
+                if topic.name != "":  
+                    delim , args = self.pubMap.getTopicFormat( topic.name)
+                    msgArgs = recvMsg.data.split(delim)
+                    msgSubTopics = [( topic.name + "/" + arg) for arg in args]
+                    [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
         except UnicodeDecodeError as e:
             log.warning(f"{e}")
             return 
@@ -102,7 +107,8 @@ class SerialDevice(BaseDevice):
         #Service CmdMsg Queue And Transmit MsgFrame over Serial
         try:
             cmdPacket = self.cmdQueue.get_nowait()
-            self.port.write(cmdPacket) # output Data
+            print(cmdPacket)
+            #self.port.write(cmdPacket) # output Data
         except Empty:
             pass
         except Exception as e:
