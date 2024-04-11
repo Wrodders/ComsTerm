@@ -7,7 +7,7 @@ from enum import Enum
 
 from common.worker import Worker
 
-
+from typing import Dict, List, Tuple
 from common.logger import getmylogger
 
 
@@ -114,13 +114,13 @@ class ZmqBridgeQt(QObject):
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
-        
         self.workerIO = Worker(self._run)
+        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
         
        
     def _run(self):
         self.log.info(f"Started ZmqBridge I/O Thread")
-        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
+       
         
         self.subscriber.connect()
         

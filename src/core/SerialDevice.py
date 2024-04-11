@@ -33,11 +33,14 @@ class SerialDevice(BaseDevice):
         super().__init__()
         self.info = info
 
-        self.cmdMap.register(topicName="VEL", topicArgs=["L", "R"], delim=":")
+        self.cmdMap.register(topicName="STOP", topicArgs=[], delim="")
+        self.cmdMap.register(topicName="START", topicArgs=[], delim="")
+        self.cmdMap.register(topicName="LINE", topicArgs=[], delim="")
+        self.cmdMap.register(topicName="TURN", topicArgs=[], delim="")
 
-        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "R", "T", "V", "M", "B"], delim=":")
-        self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
-
+        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "T", "O"], delim=":")
+        self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R", "A" ], delim=":")
+        print(self.cmdMap.getTopics())
         self.port = serial.Serial() # Data input
         self.connect()
 
@@ -84,6 +87,14 @@ class SerialDevice(BaseDevice):
             msg = msg.replace('\x00','')
             if len(msg) <= 0:
                 return
+        except UnicodeDecodeError as e:
+                log.warning(f"{e} {msgPacket}")
+                return
+        except Exception as e :
+            log.error(f"Exception in Serial Read: {e}")
+            raise 
+
+        try:
             #Decode Message
             recvMsg = MsgFrame.extractMsg(msg)        
             topic = self.pubMap.getTopicByID(recvMsg.ID)
@@ -97,7 +108,7 @@ class SerialDevice(BaseDevice):
             log.warning(f"{e} {msgPacket}")
             return 
         except Exception as e:
-            log.error(f"Exception in Serial Read: {e}")
+            log.error(f"Exception in Serial Decode: {e}")
             raise 
 
     def writeDevice(self):
@@ -107,7 +118,6 @@ class SerialDevice(BaseDevice):
         #Service CmdMsg Queue And Transmit MsgFrame over Serial
         try:
             cmdPacket = self.cmdQueue.get_nowait()
-            print(f"CCMD: {cmdPacket}")
             self.port.write(cmdPacket.encode()) # output Data
         except Empty:
             pass

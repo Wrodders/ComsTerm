@@ -30,11 +30,11 @@ class Console(QWidget):
         self.initUI()
         self.log.debug(f"Opened Console {topics}")
         self.zmqBridge = ZmqBridgeQt() 
-        
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
+        [self.zmqBridge.subscriber.addTopicSub(t) for t in self.topics]
 
-        [self.zmqBridge.subscriber.addTopicSub(t) for t in topics]
+        
 
     def closeEvent(self, event):
         """Event handler for closing the console.

@@ -1,6 +1,9 @@
-import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QDial, QSlider, QLabel, QGridLayout, QPushButton, QFrame, QVBoxLayout, QHBoxLayout, QSplitter
-from PyQt6.QtCore import Qt
+from PyQt6 import QtCore
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
+
+from common.messages import MsgFrame, TopicMap
+
 
 class Controls(QWidget):
     """Widget representing control panel with sliders and dials."""
@@ -41,6 +44,30 @@ class Controls(QWidget):
     def configure(self):
         """Opens configuration dialog."""
         pass
+
+
+
+class CmdBtnFrame(QWidget):
+    cmdBtnClick = pyqtSignal(str)  # Define custom signal to emit button text
+
+    def __init__(self, cmdMap : TopicMap):
+        super().__init__()
+        self.setWindowTitle("Device Commands")
+        self.setGeometry(100, 100, 200, 100)
+        self.setMaximumWidth(200)
+        self.vBox = QVBoxLayout()
+        self.cmdButtons = [QPushButton(cmd.name) for cmd in cmdMap.getTopics()]
+
+        for btn in self.cmdButtons:
+            btn.setMaximumWidth(100)
+            btn.clicked.connect(lambda checked, name=btn.text(): self.cmdBtnClick.emit(name))  # Connect button clicked signal to emit custom signal with button text
+
+        [self.vBox.addWidget(btn) for btn in self.cmdButtons]
+        self.setLayout(self.vBox)
+
+
+
+
 
 class SlidersFrame(QFrame):
     """Widget representing frame with sliders."""
@@ -126,12 +153,3 @@ class DialsFrame(QFrame):
         label.setText(f"{label.text().split(':')[0]}: {value}")
 
 
-def main():
-    """Main function to launch the application."""
-    app = QApplication(sys.argv)
-    controls = Controls()
-    controls.show()
-    sys.exit(app.exec())
-
-if __name__ == '__main__':
-    main()
