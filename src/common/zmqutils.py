@@ -1,15 +1,11 @@
-from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-import zmq, time
+import zmq
 from enum import Enum
 
-from common.worker import Worker
-
-from typing import Dict, List, Tuple
 from common.logger import getmylogger
-
+from common.worker import Worker
 
 
 """
@@ -41,9 +37,8 @@ def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
         raise ValueError(f"Unsupported transport type: {transport.value}")
 
 
-
 """
-@Breif: ZMQ Publish socket with added functionality.
+@Brief: ZMQ Publish socket with added functionality.
 """
 class ZmqPub:
     def __init__(self,transport : Transport, endpoint : Endpoint):
@@ -97,7 +92,7 @@ class ZmqSub:
             # No message received, continue loop
             return ("","")
         except Exception as e:
-            self.log.error(f"Excpetion in ZMQSUB Receive: {e}")
+            self.log.error(f"Exception in ZMQSUB Receive: {e}")
             return ("","")
 
     def close(self):
@@ -121,7 +116,6 @@ class ZmqBridgeQt(QObject):
     def _run(self):
         self.log.info(f"Started ZmqBridge I/O Thread")
        
-        
         self.subscriber.connect()
         
         while not self.workerIO.stopEvent.is_set():

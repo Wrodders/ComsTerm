@@ -1,21 +1,14 @@
 import random, time, lorem
 from queue import Empty
+from dataclasses import dataclass
 
 from common.logger import getmylogger
-from core.device import BaseDevice, DeviceInfo, Devices
-
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
-
-log = getmylogger(__name__)
-
+from core.device import BaseDevice, DeviceInfo
 
 @dataclass
 class SimInfo(DeviceInfo):
     rate : float = 0.1
     
-
-
 """
 @Brief: Generates Simulated data for testing.
 
@@ -25,6 +18,7 @@ class SimInfo(DeviceInfo):
 class SimulatedDevice(BaseDevice):
     def __init__(self, deviceInfo: SimInfo):
         super().__init__()        
+        self.log = getmylogger(__name__)
         # Register Device Topics
         self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
         self.pubMap.register(topicName="LINE", topicArgs=["X", "Y","Z" ], delim=":")
@@ -42,15 +36,15 @@ class SimulatedDevice(BaseDevice):
     
     def _run(self):
         '''Execute Thread'''
-        log.info("Started Simulated Device ")
+        self.log.info("Started Simulated Device ")
         self.publisher.bind()
-        log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
+        self.log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
         while not self.workerIO.stopEvent.is_set():
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()
                 self.publisher.send(topic, msg)      
             except Exception as e:
-                log.error(f"Exception in Simulated Data :{e}")
+                self.log.error(f"Exception in Simulated Data :{e}")
                 break
 
             try: # Send Cmd MsgPacket to Device
@@ -59,12 +53,12 @@ class SimulatedDevice(BaseDevice):
             except Empty:
                 pass
             except Exception as e:
-                log.error(f"Exception in Simulated Cmd :{e}")
+                self.log.error(f"Exception in Simulated Cmd :{e}")
                 break
 
             time.sleep(self.info.rate)  
 
-        log.info("Exit Simulated Interface I/O Thread")
+        self.log.info("Exit Simulated Interface I/O Thread")
         return # exit thread
     
     # Private Functions

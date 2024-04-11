@@ -1,5 +1,6 @@
 from core.device import BaseDevice, DeviceInfo
-from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
+from common.zmqutils import ZmqSub, Transport, Endpoint
+
 
 from dataclasses import dataclass
 from common.logger import getmylogger
@@ -10,16 +11,12 @@ class ZmqInfo(DeviceInfo):
     endpoint : Endpoint = Endpoint.COMSTERM
 
 
-"""
-@Brief: ZMQ Network Device Endpoint
-@Description: Publishes Messages From Cmd Queue to Device
-                Receives Messages from Proxy
-"""
 class ZmqDevice(BaseDevice):
-    def __init__(self, socketAddress : str ): 
+    def __init__(self, transport : Transport, endpoint : Endpoint ): 
         super().__init__()
         self.log = getmylogger(__name__)
-        self.socketAddr = socketAddress
+        self.endpoint = endpoint
+        self.transport  = transport
         
     def _start(self) -> bool:
         self.workerIO._begin()
@@ -27,20 +24,20 @@ class ZmqDevice(BaseDevice):
 
     def _run(self):
         '''Execute Thread'''
-        #self.pub  = ZmqPub(transport=Transport.TCP, endpoint=Endpoint.COMSTERM)
-        self.sub  = ZmqSub(transport=Transport.IPC, endpoint=Endpoint.COMSTERM)
+        self.sub  = ZmqSub(transport=self.transport, endpoint=self.endpoint)
         self.sub.connect()
-        self.sub.addTopicSub("")
-        self.log.debug(f"Started ZMQ Interface")
+        self.sub.addTopicSub("") # Allowing for Pb Sub Multiple Devices
+        self.log.info(f"Started ZMQ Device")
         while (not self.workerIO.stopEvent.is_set()):
             try:
-                topic, msg = self.sub.socket.recv_multipart()
-
-
+                topic, data = self.sub.socket.recv_multipart()
+                if data != "":
+                    self.publisher.send(f"zmq/{topic}", data)
             except Exception as e:
-                self.log.error(f"Exception in ZmqQTSignal:{e} ")
-                break
+                    self.log.warning(f"Exception in ZmqDeviceRun:{e} ")
+                    pass
         
         self.sub.close() 
-        self.log.debug("Exit Zmq Bridge QT I/O Thread")  
+        self.log.info("Exit Zmq Device")  
         return
+    

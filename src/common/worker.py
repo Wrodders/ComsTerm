@@ -1,7 +1,6 @@
 import threading
 from common.logger import getmylogger
 
-
 log = getmylogger(__name__)
 
 """

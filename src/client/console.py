@@ -1,10 +1,8 @@
 from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
-from PyQt6.QtGui import QTextCursor
 
-from core.zmqutils import ZmqBridgeQt
-
+from common.zmqutils import ZmqBridgeQt
 from common.logger import getmylogger
 from common.messages import TopicMap
 from common.utils import TopicMenu
@@ -79,10 +77,11 @@ class Console(QWidget):
         """
         topic, data = msg
         if(topic in self.topics):
-            if self.consoleText.document().lineCount() > 200:
-                self.consoleText.clear()
+            if(isinstance(self.consoleText.document, QTextEdit)):
+                if self.consoleText.document().lineCount() > 200:
+                    self.consoleText.clear()
 
-            self.consoleText.append(topic +"    "+data)  # add data to console
+            self.consoleText.append(topic +"    "+data)  # add data to console tab spaced
 
 
 class ConfigConsole(QDialog):
@@ -97,11 +96,7 @@ class ConfigConsole(QDialog):
         self.setWindowTitle("New Console")
 
         self.topicMenu= TopicMenu(topicMap)
-        
-
-
-
-
+    
         QBtn = (
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
@@ -114,6 +109,3 @@ class ConfigConsole(QDialog):
         vBox.addWidget(self.topicMenu)
         vBox.addWidget(self.buttonBox)
         self.setLayout(vBox)
-
-
-
