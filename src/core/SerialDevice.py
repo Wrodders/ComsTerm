@@ -38,7 +38,7 @@ class SerialDevice(BaseDevice):
         self.cmdMap.register(topicName="LINE", topicArgs=[], delim="")
         self.cmdMap.register(topicName="TURN", topicArgs=[], delim="")
 
-        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "T", "O"], delim=":")
+        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "R", "TL", "TR"], delim=":")
         self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R", "A" ], delim=":")
         print(self.cmdMap.getTopics())
         self.port = serial.Serial() # Data input

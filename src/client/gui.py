@@ -7,6 +7,7 @@ from core.device import BaseDevice
 from client.plot import CreatePlot, LinePlot
 from client.console import ConfigConsole, Console
 from client.commander import Commander
+from client.controls import CmdBtnFrame
 from client.menues import DeviceConfig, SettingsMenu
 from common.logger import getmylogger
 from typing import Dict, List, Tuple
@@ -95,7 +96,8 @@ class GUI(QWidget):
             diag = CreatePlot(self.comsTerm.device.pubMap)
             if diag.exec() == True:
                 protocol = diag.topicMenu.saveProtocol()
-                plot = LinePlot(protocol=protocol, yrange=(10,-10),xrange=100)
+                yRange = (float(diag.topicMenu.yMin.text()) , float(diag.topicMenu.yMax.text()))
+                plot = LinePlot(protocol=protocol, yrange=yRange,xrange=100)
                 self.windows.append(plot)
                 plot.show()
                 pass
@@ -139,7 +141,13 @@ class GUI(QWidget):
             err = QMessageBox.information(self, "Info", f"Already Connected")
         else:
             self.comsTerm.newDevice(self.deviceCon.getValues())
-            self.devLabel.setText(f"Device : Connected")        
+            self.devLabel.setText(f"Device : Connected") 
+            if(isinstance(self.comsTerm.device, BaseDevice)):      
+                controls = CmdBtnFrame(self.comsTerm.device.cmdMap)
+
+                controls.cmdBtnClick.connect(self.comsTerm.device.sendCmd)
+                controls.show()
+                self.windows.append(controls) 
                
  
     def handelDisconnect(self):
