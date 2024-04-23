@@ -21,7 +21,7 @@ class SimulatedDevice(BaseDevice):
         self.log = getmylogger(__name__)
         # Register Device Topics
         self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
-        self.pubMap.register(topicName="LINE", topicArgs=["X", "Y","Z" ], delim=":")
+        self.pubMap.register(topicName="ACCEL", topicArgs=["X", "Y","Z" ], delim=":")
         #Simulated only parameters
         self.info = deviceInfo
         self.topicGenFuncMap = {

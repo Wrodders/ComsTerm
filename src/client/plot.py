@@ -65,6 +65,7 @@ class LinePlot(BasePlot):
             # Create a figure and axis for the plot
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1,1,1)
+        self.ax.grid(linestyle='dashed', linewidth=0.5)
 
         # Initialize the plot
         self.xs = list(range(0, self.x_len)) # time series (x-axis)
