@@ -1,24 +1,19 @@
-from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-from core.device import BaseDevice
+import sys
+
+from common.logger import getmylogger
+
+from core.device import BaseDevice 
+from core.comsTerm import ComsTerm
 
 from client.plot import CreatePlot, LinePlot
 from client.console import ConfigConsole, Console
 from client.commander import Commander
-from client.menues import DeviceConfig, SettingsMenu
-from common.logger import getmylogger
-from typing import Dict, List, Tuple
+from client.controls import CmdBtnFrame
+from client.menus import DeviceConfig, SettingsMenu
 
-
-from core.SerialDevice import SerialDevice
-from core.ZmqDevice import ZmqDevice
-from core.SimulatedDevice import SimulatedDevice, SimInfo
-
-from core.device import Devices
-
-from core.comsTerm import ComsTerm
 
 class GUI(QWidget):
     """
@@ -26,9 +21,8 @@ class GUI(QWidget):
     Handles creation of new GUI submodules and IO Threads
 
     Each Window has its own IO thread
-    GUI Communicated to device through ComsTerm 
+    GUI Communicated to device through ComsTerm - decoupled logic from UI
     """
-    
     def __init__(self):
         """Constructor method for GUI class."""
         super().__init__()
@@ -39,7 +33,6 @@ class GUI(QWidget):
         self.comsTerm = ComsTerm()
         self.windows = list()
      
-
         self.initUI()
         self.connectSignals()
 
@@ -85,9 +78,12 @@ class GUI(QWidget):
         self.newPlotB.clicked.connect(self.newPlotHandle)
         self.newConsoleB.clicked.connect(self.newConsoleHandle)
         self.commander.sendB.clicked.connect(self.sendCmdHandle)
-        self.deviceCon.connectBtn.clicked.connect(self.handleConnect)
-        self.deviceCon.disconnectBtn.clicked.connect(self.handelDisconnect)
+        self.deviceCon.connectBtn.clicked.connect(self.connectHandle)
+        self.deviceCon.disconnectBtn.clicked.connect(self.disconnectHandle)
 
+    """
+    Create and interact with ComsTerm through UI Signals
+    """
 
     def newPlotHandle(self):
         """Handles creation of a new plot."""
@@ -95,7 +91,8 @@ class GUI(QWidget):
             diag = CreatePlot(self.comsTerm.device.pubMap)
             if diag.exec() == True:
                 protocol = diag.topicMenu.saveProtocol()
-                plot = LinePlot(protocol=protocol, yrange=(10,-10),xrange=100)
+                yRange = (float(diag.topicMenu.yMin.text()) , float(diag.topicMenu.yMax.text()))
+                plot = LinePlot(protocol=protocol, yrange=yRange,xrange=100)
                 self.windows.append(plot)
                 plot.show()
                 pass
@@ -133,16 +130,21 @@ class GUI(QWidget):
             err = QMessageBox.critical(self, "Error", "No Device Connected")
 
 
-
-    def handleConnect(self):
+    def connectHandle(self):
         if isinstance(self.comsTerm.device, BaseDevice):
             err = QMessageBox.information(self, "Info", f"Already Connected")
         else:
             self.comsTerm.newDevice(self.deviceCon.getValues())
-            self.devLabel.setText(f"Device : Connected")        
+            self.devLabel.setText(f"Device : Connected") 
+            if(isinstance(self.comsTerm.device, BaseDevice)):      
+                controls = CmdBtnFrame(self.comsTerm.device.cmdMap)
+
+                controls.cmdBtnClick.connect(self.comsTerm.device.sendCmd)
+                controls.show()
+                self.windows.append(controls) 
                
  
-    def handelDisconnect(self):
+    def disconnectHandle(self):
         if isinstance(self.comsTerm.device, BaseDevice) == False:
             err = QMessageBox.information(self, "Info", "No Connections")
         else:
@@ -152,4 +154,13 @@ class GUI(QWidget):
 
         
 
+def main():
+    app = QApplication(sys.argv)
+    gui = GUI()
+    gui.show()
+   
+    sys.exit(app.exec())
 
+
+if __name__ == '__main__':
+    main()

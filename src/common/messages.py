@@ -1,8 +1,6 @@
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
-
-
+from typing import Dict, List
 
 ''' 
 MsgFrame: Represents the raw serialized msg from a device. 
@@ -32,7 +30,6 @@ class MsgFrame():
         return cls(ID=ID, data=data)
 
         
-
 """ 
 Topics: Devices Publish Data over topics. 
         Descriptive names are mapped to msg ids.

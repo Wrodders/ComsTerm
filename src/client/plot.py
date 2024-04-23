@@ -2,21 +2,16 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QColor
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.animation as animation
+plt.style.use('dark_background')
 
-
-from core.device import TopicMap, Worker
-from core.zmqutils import ZmqBridgeQt
-from core.ZmqDevice import ZmqSub, Transport, Endpoint
+from common.zmqutils import ZmqBridgeQt
 from common.logger import getmylogger
 from common.utils import TopicMenu
-from collections import deque , defaultdict
-
-from typing import Tuple
-
-plt.style.use('dark_background')
+from core.device import TopicMap
 
 """     
 Plot:   Subscribes to topics publishing data over ZMQ. 
@@ -41,7 +36,6 @@ class BasePlot(QFrame):
         raise NotImplementedError("Subclasses must implement updateData method")
 
 
-
 class LinePlot(BasePlot):
     """Class for line plotting."""
     def __init__(self, yrange: tuple[float, float], xrange: int, protocol: tuple[str, ...]):
@@ -52,7 +46,6 @@ class LinePlot(BasePlot):
         self.protocol = protocol
         self.dataSet = dict()
         self.lines = list()
-
 
         self.initUI()
         self.connectSignals()
@@ -67,13 +60,12 @@ class LinePlot(BasePlot):
         self.zmqBridge.workerIO._stop()  # stop device thread
         event.accept()
 
-
-
     def initUI(self):
         """Initializes the user interface."""
             # Create a figure and axis for the plot
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1,1,1)
+        self.ax.grid(linestyle='dashed', linewidth=0.5)
 
         # Initialize the plot
         self.xs = list(range(0, self.x_len)) # time series (x-axis)
@@ -86,7 +78,8 @@ class LinePlot(BasePlot):
             self.lines.append(line)
         self.ax.legend(loc=1)
         # matplotlib timer animation
-        self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), interval=200, blit=False, cache_frame_data=False)
+        self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), 
+                                                  interval=200, blit=False, cache_frame_data=False)
 
 
         self.canvas = FigureCanvas(self.fig)
@@ -183,7 +176,3 @@ class CreatePlot(QDialog):
         self.grid.addWidget(self.topicMenu, 0, 0, 4, 2)
         self.grid.addWidget(self.buttonBox, 4, 0, 1, 2)
         self.setLayout(self.grid)
-
-    
-
-

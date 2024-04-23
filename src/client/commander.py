@@ -49,8 +49,9 @@ class Commander(QWidget):
         """
         if msg == "":
             return
-        if self.console.document().lineCount() > 200:
-            self.console.clear()
+        if(isinstance(self.console.document, QTextEdit)):
+            if self.console.document().lineCount() > 200:
+                self.console.clear()
 
         self.console.append(msg)  # Add data to console 
 

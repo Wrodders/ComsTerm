@@ -1,17 +1,14 @@
 from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
-from PyQt6.QtWidgets import QWidget
+
+from common.utils import scanUSB
 
 from core.device import Devices, DeviceInfo
 from core.SerialDevice import SerialInfo
 from core.SimulatedDevice import SimInfo
 from core.ZmqDevice import ZmqInfo
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
-from common.utils import scanUSB
-
-
+from common.zmqutils import Transport, Endpoint
 
 
 class SettingsMenu(QFrame):
@@ -23,11 +20,6 @@ class SettingsMenu(QFrame):
 
     def initUI(self):
         pass
-
-
-
-
-
 
 """
 New Device Config UI
@@ -66,8 +58,8 @@ class DeviceConfig(QWidget):
         self.setLayout(self.grid)
 
     def updateDeviceStack(self):
-        self.stackLayout.setCurrentIndex(self.conDeviceCB.currentIndex())
-
+        index = self.conDeviceCB.currentIndex()
+        self.stackLayout.setCurrentIndex(index)
 
     def getValues(self) -> DeviceInfo:
 
@@ -79,11 +71,14 @@ class DeviceConfig(QWidget):
         elif self.conDeviceCB.currentText() == Devices.SIM.name:
             rate = self.simConfig.rateCB.currentText()
             devInfo = SimInfo(rate=int(rate))
-            
+
+        elif self.conDeviceCB.currentText() == Devices.ZMQ.name:
+            tp = self.zmqConfig.transportCB.currentText()
+            ep = self.zmqConfig.endpointCB.currentText()
+           
+            devInfo = ZmqInfo(transport=tp, endpoint=ep)
+
         return devInfo
-
-
-
 
 
 
@@ -161,7 +156,7 @@ class UDPConfig(QFrame):
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QGridLayout()
-        layout.addWidget(QLabel("IP Address:"), 0, 0)
+        layout.addWidget(QLabel("I Address:"), 0, 0)
         layout.addWidget(QComboBox(), 0, 1)
         layout.addWidget(QLabel("Port:"), 1, 0)
         layout.addWidget(QComboBox(), 1, 1)
@@ -177,10 +172,14 @@ class ZMQConfig(QFrame):
         self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
-        layout = QGridLayout()
-        layout.addWidget(QLabel("Socket Endpoint:"), 0, 0)
-        layout.addWidget(QComboBox(), 0, 1)
-
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Socket Endpoint:"))
+        self.transportCB = QComboBox()
+        self.transportCB.addItems(Transport._member_names_)
+        self.endpointCB = QComboBox()
+        self.endpointCB.addItems(Endpoint._member_names_)
+        layout.addWidget(self.transportCB)
+        layout.addWidget(self.endpointCB)
         self.setLayout(layout)
 
 

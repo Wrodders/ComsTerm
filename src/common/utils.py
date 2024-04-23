@@ -22,6 +22,10 @@ class TopicMenu(QFrame):
 
         self.addSeriesBtn = QPushButton("Add Series")
         self.addSeriesBtn.clicked.connect(self.addSeries)
+        self.yMin = QLineEdit("Min")
+        self.yMin.setMaximumWidth(50)
+        self.yMax = QLineEdit("Max")
+        self.yMax.setMaximumWidth(50)
 
         self.removeSeriesBtn = QPushButton("Remove Series")
 
@@ -38,7 +42,9 @@ class TopicMenu(QFrame):
         self.grid.addWidget(self.topicCB, 0 , 0, 1,1)                
         self.grid.addWidget(self.argCb, 0 , 1, 1,1)
         self.grid.addWidget(self.addSeriesBtn, 0 , 2, 1,1)
-        self.grid.addWidget(self.table, 1, 0, 3,4 )
+        self.grid.addWidget(self.yMin, 0, 3,  1, 1)
+        self.grid.addWidget(self.yMax, 0 , 4, 1,1 )
+        self.grid.addWidget(self.table, 1, 0, 3,5 )
         self.setLayout(self.grid)
 
 

@@ -1,22 +1,22 @@
 from queue import Queue
 from enum import Enum
+from dataclasses import dataclass
+
+from common.logger import getmylogger
 
 from common.worker import Worker
-from common.messages import MsgFrame, TopicMap
-from core.zmqutils import ZmqPub, ZmqSub, Transport, Endpoint
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
-from common.logger import getmylogger
+from common.messages import TopicMap
+from common.zmqutils import ZmqPub,Transport, Endpoint
+
 
 
 class Devices(Enum):
     SERIAL = 0
-    UDP = 1
-    TCP = 2
-    ZMQ = 3
+    ZMQ = 1
+    UDP = 2
+    TCP = 3
     BLE = 4
     SIM = 5
-
 
 @dataclass
 class DeviceInfo():
@@ -25,8 +25,6 @@ class DeviceInfo():
     status : bool = False
     threadId : str = ""
     
-
-
 """
 @Brief: Base Class for a Device. Handles communications between device and ComsTerm.
 @Description:   Implements a set of CMDs and PUBs topics. Parses and Validates Commands against a devices protocols. 
@@ -50,15 +48,15 @@ class BaseDevice():
         self.cmdMap.register(topicName="ID", topicArgs=[], delim="")
         self.cmdMap.register(topicName="RESET", topicArgs=[], delim="")
 
-        self.pubMap.register(topicName="CMD_RET", topicArgs=["CMDID", "RETVAL"], delim=":")
+        self.pubMap.register(topicName="CMD_RET", topicArgs=["RETVAL"], delim="")
         self.pubMap.register(topicName="ERROR", topicArgs=[], delim="")
         self.pubMap.register(topicName="INFO", topicArgs=[], delim="")
-        self.pubMap.register(topicName="DEBUG", topicArgs=[], delim="")
+        self.pubMap.register(topicName="DEBUG", topicArgs=["MSG"], delim="")
 
 
 
     def parseCmd(self, text: str) -> str:
-        cmdParts = text.split("-", 1) # cmdName arguments
+        cmdParts = text.split(" ", 1) # cmdName arguments
         cmdName = cmdParts[0] 
         cmdTopic = self.cmdMap.getTopicByName(cmdName)
         if cmdTopic == None: # exit early if cmd name wrong 
@@ -78,8 +76,8 @@ class BaseDevice():
         data = cmdTopic.delim.join(cmdArgs)  # Join arguments using delimiter
         cmdID = cmdTopic.ID
         # assemble packet 
-        msgPacket = f'<{len(data)}{cmdID}{data}\n'
-    
+        msgPacket = f"{cmdID}"
+        print(msgPacket)
         return msgPacket
         
     def sendCmd(self, text:str):

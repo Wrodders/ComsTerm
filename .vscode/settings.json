@@ -13,18 +13,32 @@
         "testsignal"
     ],
     "cSpell.words": [
+        "Antialiasing",
         "baudrate",
+        "Binded",
+        "blit",
         "bytesize",
         "COMSTERM",
         "connectionlayout",
         "dataline",
         "Dfault",
         "Dockable",
+        "fargs",
         "INPROC",
+        "levelname",
+        "NOBLOCK",
         "outputconsole",
+        "packetazation",
+        "PISTREAM",
+        "QLCD",
+        "qtagg",
         "requeiremtes",
         "serialutil",
         "unsub",
+        "ydata",
+        "ylim",
+        "yrange",
+        "ZMQSUB",
         "zmqutils"
     ]
 }
