@@ -1,4 +1,4 @@
-import serial, serial.tools.list_ports
+import serial, serial.tools.list_ports, os
 from queue import Empty
 from dataclasses import dataclass
 
@@ -35,7 +35,7 @@ class SerialDevice(BaseDevice):
 
         self.pubMap.register(topicName="MOTOR", topicArgs=["L", "R", "TL","TR","OL", "OR"], delim=":")
         self.pubMap.register(topicName="LINE", topicArgs=["L", "C", "R" ], delim=":")
-        print(self.cmdMap.getTopics())
+
         self.port = serial.Serial() # Data input
         self.connect()
 
