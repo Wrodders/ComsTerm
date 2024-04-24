@@ -33,15 +33,11 @@ class DeviceConfig(QWidget):
 
         self.serialConfig = SerialConfig()
         self.simConfig = SimConfig()
-        self.zmqConfig = ZMQConfig()
-        self.tcpConfig = TCPConfig()
-        self.udpConfig = UDPConfig()
+
         
         self.stackLayout = QStackedLayout()
         self.stackLayout.addWidget(self.serialConfig)
-        self.stackLayout.addWidget(self.zmqConfig)
-        self.stackLayout.addWidget(self.tcpConfig)
-        self.stackLayout.addWidget(self.udpConfig)
+        self.stackLayout.addWidget(self.simConfig)
         self.connectBtn = QPushButton("Connect")
         self.connectBtn.setMaximumWidth(350)
         self.disconnectBtn = QPushButton("Disconnect")
@@ -68,16 +64,9 @@ class DeviceConfig(QWidget):
             baud = self.serialConfig.baudRate.currentText()
             devInfo = SerialInfo(name="1", port=port, baudRate=int(baud))
 
-        elif self.conDeviceCB.currentText() == Devices.SIM.name:
+        elif self.conDeviceCB.currentText() == Devices.SIMULATED.name:
             rate = self.simConfig.rateCB.currentText()
-            devInfo = SimInfo(rate=int(rate))
-
-        elif self.conDeviceCB.currentText() == Devices.ZMQ.name:
-            tp = self.zmqConfig.transportCB.currentText()
-            ep = self.zmqConfig.endpointCB.currentText()
-           
-            devInfo = ZmqInfo(transport=tp, endpoint=ep)
-
+            devInfo = SimInfo(dt=1/float(rate))
         return devInfo
 
 
@@ -95,7 +84,7 @@ class SerialConfig(QFrame):
         
         layout.addWidget(QLabel("Serial Port:"), 0, 0)
         self.portCB = QComboBox()
-        self.portCB.addItems(scanUSB("usb"))
+        self.portCB.addItems(scanUSB())
         self.baudRate = QComboBox()
         self.baudRate.addItems(["9600", "115200"])
         self.dataBits = QComboBox()
@@ -195,7 +184,8 @@ class SimConfig(QFrame):
         self.rateCB = QComboBox()
         self.rateCB.addItems(["1", "10", "100"])
         layout = QGridLayout()
-        layout.addWidget(QLabel("Rate:"), 0, 0)
-        layout.addWidget(self.rateCB, 1, 1)
+        layout.addWidget(QLabel("Rate:"), 0, 0, 1, 2)
+        layout.addWidget(self.rateCB, 0, 1, 1, 1)
+        layout.addWidget(QLabel("[per s]"), 0, 2, 1,1)
 
         self.setLayout(layout)

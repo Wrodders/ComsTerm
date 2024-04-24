@@ -170,9 +170,20 @@ class CreatePlot(QDialog):
             | QDialogButtonBox.StandardButton.Cancel
         )
         self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.accepted.connect(self.verify)
         self.buttonBox.rejected.connect(self.reject)
 
         self.grid.addWidget(self.topicMenu, 0, 0, 4, 2)
         self.grid.addWidget(self.buttonBox, 4, 0, 1, 2)
         self.setLayout(self.grid)
+
+    def verify(self):
+        try:
+            float(self.topicMenu.yMin.text())
+            float(self.topicMenu.yMax.text())
+            self.accept()
+        except ValueError:
+            err = QMessageBox.critical(self, "Error", "NaN Entry")
+            
+                
+

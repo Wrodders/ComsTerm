@@ -1,7 +1,7 @@
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-import zmq
+import zmq, platform
 from enum import Enum
 
 from common.logger import getmylogger
@@ -22,6 +22,7 @@ class Transport(Enum):
 class Endpoint(Enum):
     COMSTERM = "comsterm"
     PISTREAM = "piStream.local"
+    LOOPBACK = "127.0.0.1:5555"
 
 def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
     if transport == Transport.TCP:
@@ -109,8 +110,16 @@ class ZmqBridgeQt(QObject):
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
+        osName = platform.system()
+        if(osName == "Windows"):
+            self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
+        elif(osName== "Darwin"  or osName =="Linux"): # mac os
+            self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
+        else:
+            raise NotImplementedError(f"Platform '{osName}' not supported")
+        
         self.workerIO = Worker(self._run)
-        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
+
         
        
     def _run(self):

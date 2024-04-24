@@ -1,3 +1,4 @@
+import platform
 from queue import Queue
 from enum import Enum
 from dataclasses import dataclass
@@ -12,16 +13,12 @@ from common.zmqutils import ZmqPub,Transport, Endpoint
 
 class Devices(Enum):
     SERIAL = 0
-    ZMQ = 1
-    UDP = 2
-    TCP = 3
-    BLE = 4
-    SIM = 5
+    SIMULATED = 1
 
 @dataclass
 class DeviceInfo():
     name : str = ""
-    devType : Devices = Devices.SIM
+    devType : Devices = Devices.SIMULATED
     status : bool = False
     threadId : str = ""
     
@@ -38,21 +35,18 @@ class BaseDevice():
         self.info = DeviceInfo()
 
         self.workerIO = Worker(self._run)
-        self.cmdQueue = Queue() 
-        self.publisher = ZmqPub(transport=Transport.IPC, endpoint=Endpoint.COMSTERM)
+        self.cmdQueue = Queue()
+        osName = platform.system()
+        print(osName)
+        if(osName == "Windows"):
+            self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
+        elif(osName== "Darwin"  or osName =="Linux"): # mac os
+            self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
+
 
         # Create Base Topic Maps
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
-
-        self.cmdMap.register(topicName="ID", topicArgs=[], delim="")
-        self.cmdMap.register(topicName="RESET", topicArgs=[], delim="")
-
-        self.pubMap.register(topicName="CMD_RET", topicArgs=["RETVAL"], delim="")
-        self.pubMap.register(topicName="ERROR", topicArgs=[], delim="")
-        self.pubMap.register(topicName="INFO", topicArgs=[], delim="")
-        self.pubMap.register(topicName="DEBUG", topicArgs=["MSG"], delim="")
-
 
 
     def parseCmd(self, text: str) -> str:
@@ -77,7 +71,6 @@ class BaseDevice():
         cmdID = cmdTopic.ID
         # assemble packet 
         msgPacket = f"{cmdID}"
-        print(msgPacket)
         return msgPacket
         
     def sendCmd(self, text:str):
