@@ -7,34 +7,22 @@ from common.utils import scanUSB
 from core.device import Devices, DeviceInfo
 from core.SerialDevice import SerialInfo
 from core.SimulatedDevice import SimInfo
-from core.ZmqDevice import ZmqInfo
 from common.zmqutils import Transport, Endpoint
 
-
-class SettingsMenu(QFrame):
-
-    def __init__(self):
-        super().__init__()
-
-        self.initUI()
-
-    def initUI(self):
-        pass
 
 """
 New Device Config UI
 """
-
 class DeviceConfig(QWidget):
     def __init__(self):
         super(DeviceConfig, self).__init__()
         self.grid = QGridLayout()
-        self.setMinimumWidth(350)
+        self.setMinimumWidth(200)
 
+        """ Device Config Stacks"""
         self.serialConfig = SerialConfig()
         self.simConfig = SimConfig()
 
-        
         self.stackLayout = QStackedLayout()
         self.stackLayout.addWidget(self.serialConfig)
         self.stackLayout.addWidget(self.simConfig)
@@ -42,15 +30,18 @@ class DeviceConfig(QWidget):
         self.connectBtn.setMaximumWidth(350)
         self.disconnectBtn = QPushButton("Disconnect")
         self.disconnectBtn.setMaximumWidth(350)
+        self.scanBtn = QPushButton("Scan")
+        self.scanBtn.setMaximumWidth(350)
         self.conDeviceCB = QComboBox()
         self.conDeviceCB.setMaximumWidth(350)
         self.conDeviceCB.currentIndexChanged.connect(self.updateDeviceStack)
         self.conDeviceCB.addItems(Devices._member_names_)
 
-        self.grid.addWidget(self.conDeviceCB, 0,0, 1, 2)
-        self.grid.addLayout(self.stackLayout, 1, 0 , 2, 2)
-        self.grid.addWidget(self.connectBtn, 3, 0, 1,1)
-        self.grid.addWidget(self.disconnectBtn, 3, 1, 1,1)
+        self.grid.addWidget(self.conDeviceCB, 0,0, 1, 3)
+        self.grid.addLayout(self.stackLayout, 1, 0 , 2, 3)
+        self.grid.addWidget(self.disconnectBtn, 3, 0, 1,1)
+        self.grid.addWidget(self.connectBtn, 3, 1, 1,1)
+        self.grid.addWidget(self.scanBtn, 3, 2, 1,1)
         self.setLayout(self.grid)
 
     def updateDeviceStack(self):
@@ -77,7 +68,6 @@ class SerialConfig(QFrame):
         self.initUI()
 
     def initUI(self):
-        self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QGridLayout()
@@ -124,7 +114,6 @@ class TCPConfig(QFrame):
         self.initUI()
 
     def initUI(self):
-        self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QGridLayout()
@@ -141,7 +130,6 @@ class UDPConfig(QFrame):
         self.initUI()
 
     def initUI(self):
-        self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QGridLayout()
@@ -158,7 +146,6 @@ class ZMQConfig(QFrame):
         self.initUI()
 
     def initUI(self):
-        self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QVBoxLayout()
@@ -178,7 +165,6 @@ class SimConfig(QFrame):
         self.initUI()
 
     def initUI(self):
-        self.setMaximumWidth(350)
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         self.rateCB = QComboBox()

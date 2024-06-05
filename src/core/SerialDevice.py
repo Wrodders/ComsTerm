@@ -156,3 +156,4 @@ class SerialDevice(BaseDevice):
             self.log.info('Serial Port Closed')
             return True
         
+

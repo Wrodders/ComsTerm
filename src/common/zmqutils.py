@@ -120,13 +120,9 @@ class ZmqBridgeQt(QObject):
         
         self.workerIO = Worker(self._run)
 
-        
-       
     def _run(self):
         self.log.info(f"Started ZmqBridge I/O Thread")
-       
         self.subscriber.connect()
-        
         while not self.workerIO.stopEvent.is_set():
             try:
                 topic, msg = self.subscriber.receive()
