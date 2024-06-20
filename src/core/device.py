@@ -3,22 +3,20 @@ from queue import Queue
 from enum import Enum
 from dataclasses import dataclass
 
-from common.logger import getmylogger
+from core.logger import getmylogger
 
-from common.worker import Worker
-from common.messages import TopicMap
-from common.zmqutils import ZmqPub,Transport, Endpoint
+from core.worker import Worker
+from core.messages import TopicMap
+from core.zmqutils import ZmqPub,Transport, Endpoint
 
 
-
-class Devices(Enum):
+class DeviceType(Enum):
     SERIAL = 0
     SIMULATED = 1
 
 @dataclass
 class DeviceInfo():
-    name : str = ""
-    devType : Devices = Devices.SIMULATED
+    devType : DeviceType = DeviceType.SIMULATED
     status : bool = False
     threadId : str = ""
     
@@ -31,19 +29,14 @@ class BaseDevice():
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
-
         self.info = DeviceInfo()
-
         self.workerIO = Worker(self._run)
         self.cmdQueue = Queue()
         osName = platform.system()
-        print(osName)
         if(osName == "Windows"):
             self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
         elif(osName== "Darwin"  or osName =="Linux"): # mac os
-            self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
-
-
+            self.publisher = ZmqPub(Transport.IPC, Endpoint.COMSTERM)
         # Create Base Topic Maps
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
@@ -90,3 +83,8 @@ class BaseDevice():
     
     def _stop(self):
        self.workerIO._stop()
+
+
+
+
+       

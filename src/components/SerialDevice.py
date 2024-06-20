@@ -2,15 +2,16 @@ import serial, serial.tools.list_ports, os
 from queue import Empty
 from dataclasses import dataclass
 
-from common.logger import getmylogger
-from common.utils import scanUSB
-from common.messages import Topic, MsgFrame
+from core.logger import getmylogger
+from core.utils import scanUSB
+from core.messages import Topic, MsgFrame
 
-from core.device import BaseDevice, DeviceInfo, Devices
+from core.device import BaseDevice, DeviceInfo, DeviceType
+from typing import Type
 
 @dataclass
 class SerialInfo(DeviceInfo):
-    devType : Devices = Devices.SERIAL
+    devType : DeviceType = DeviceType.SERIAL
     port : str = ""
     baudRate : int = 115200
 
@@ -84,7 +85,7 @@ class SerialDevice(BaseDevice):
                 return
         except UnicodeDecodeError as e:
                 self.log.warning(f"{e} {msgPacket}")
-                return
+                return # Dont bother decoding failed message, exit
         except Exception as e :
             self.log.error(f"Exception in Serial Read: {e}")
             raise 

@@ -80,10 +80,8 @@ class TopicMap:
             return (str(), list())
         
     def getTopicNames(self) -> List[str]:
-        
         return list(set([topic.name for topic in self.topics.values()]))
     
-
     def getTopics(self) -> List[Topic]:
         return list(self.topics.values())
     

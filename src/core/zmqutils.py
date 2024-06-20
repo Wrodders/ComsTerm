@@ -4,8 +4,8 @@ from PyQt6.QtWidgets import *
 import zmq, platform
 from enum import Enum
 
-from common.logger import getmylogger
-from common.worker import Worker
+from core.logger import getmylogger
+from core.worker import Worker
 
 
 """
@@ -18,24 +18,24 @@ class Transport(Enum):
     TCP = "tcp"
     UDP = "udp"
 
-
 class Endpoint(Enum):
     COMSTERM = "comsterm"
     PISTREAM = "piStream.local"
     LOOPBACK = "127.0.0.1:5555"
 
 def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
-    if transport == Transport.TCP:
-        # Example: tcp://127.0.0.1:5555
-        return f"{transport.value}://{endpoint.value}"
-    elif transport == Transport.IPC:
-        # Example: ipc:///tmp/zmq_socket
-        return f"{transport.value}:///tmp/{endpoint.value}"
-    elif transport == Transport.INPROC:
-        # Example: inproc://example
-        return f"{transport.value}://{endpoint.value}"
-    else:
-        raise ValueError(f"Unsupported transport type: {transport.value}")
+    match transport:
+        case Transport.TCP:
+            # Example: tcp://127.0.0.1:5555
+            return f"{transport.value}://{endpoint.value}"
+        case Transport.IPC:
+            # Example: ipc:///tmp/zmq_socket
+            return f"{transport.value}:///tmp/{endpoint.value}"
+        case Transport.INPROC:
+            # Example: inproc://example
+            return f"{transport.value}://{endpoint.value}"
+        case _:
+            raise ValueError(f"Unsupported transport type: {transport.value}")
 
 
 """
@@ -90,7 +90,7 @@ class ZmqSub:
             dataFrame = self.socket.recv_multipart(flags=zmq.NOBLOCK)
             return (dataFrame[0].decode(),dataFrame[1].decode())
         except zmq.Again:
-            # No message received, continue loop
+            # No message received, continue
             return ("","")
         except Exception as e:
             self.log.error(f"Exception in ZMQSUB Receive: {e}")
@@ -114,14 +114,14 @@ class ZmqBridgeQt(QObject):
         if(osName == "Windows"):
             self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
         elif(osName== "Darwin"  or osName =="Linux"): # mac os
-            self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
+            self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM)
         else:
             raise NotImplementedError(f"Platform '{osName}' not supported")
         
         self.workerIO = Worker(self._run)
 
     def _run(self):
-        self.log.info(f"Started ZmqBridge I/O Thread")
+        self.log.debug(f"Started ZmqBridge I/O Thread")
         self.subscriber.connect()
         while not self.workerIO.stopEvent.is_set():
             try:
@@ -134,6 +134,6 @@ class ZmqBridgeQt(QObject):
                 break
         
         self.subscriber.close()
-        self.log.info("Exiting ZmqBridge I/O Thread")
+        self.log.debug("Exiting ZmqBridge I/O Thread")
                 
         

@@ -2,7 +2,7 @@ import random, time, lorem
 from queue import Empty
 from dataclasses import dataclass
 
-from common.logger import getmylogger
+from core.logger import getmylogger
 from core.device import BaseDevice, DeviceInfo
 
 @dataclass
@@ -32,6 +32,7 @@ class SimulatedDevice(BaseDevice):
         }
     
     def _start(self) -> bool:
+        "@Brief: Starts worker IO thread"
         self.workerIO._begin()
         return True
     
@@ -41,31 +42,45 @@ class SimulatedDevice(BaseDevice):
         self.publisher.bind()
         self.log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
         while not self.workerIO.stopEvent.is_set():
-            try: # grab data from device 
-                topic, msg = self._generate_msg_for_topic()
-                delim , args = self.pubMap.getTopicFormat(topic)
-                msgArgs = msg.split(delim)
-                msgSubTopics = [( topic + "/" + arg) for arg in args]
-                [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+            
+            try:
+                self.genSimData()
+                self.runCmds()
             except Exception as e:
-                self.log.error(f"Exception in Simulated Data :{e}")
+                self.log.error(f"Unexpected exception in thread loop: {e}")
                 break
-
-            try: # Send Cmd MsgPacket to Device
-                cmdPacket = self.cmdQueue.get_nowait()
-                print(cmdPacket) # test commander validation & packetazation 
-            except Empty:
-                pass
-            except Exception as e:
-                self.log.error(f"Exception in Simulated Cmd :{e}")
-                break
-
             time.sleep(self.info.dt)  
 
-        self.log.info("Exit Simulated Interface I/O Thread")
-        return # exit thread
+        self.log.debug("Exit Simulated Interface I/O Thread")
     
-    # Private Functions
+    def genSimData(self):
+        """ 
+        @Brief: Generates Simulated Data
+        """
+        try: # grab data from device 
+            topic, msg = self._generate_msg_for_topic()
+            delim , args = self.pubMap.getTopicFormat(topic)
+            msgArgs = msg.split(delim)
+            msgSubTopics = [( topic + "/" + arg) for arg in args]
+            [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+        except Exception as e:
+            self.log.error(f"Exception in Gen Simulated Data :{e}")
+            raise
+
+    def runCmds(self):
+        """
+        @Brief: Grabs commands if available and executes
+        """
+        try: # Send Cmd MsgPacket to Device
+            cmdPacket = self.cmdQueue.get_nowait()
+            print(cmdPacket) # test commander validation & packetazation 
+        except Empty:
+            pass
+        except Exception as e:
+            self.log.error(f"Exception in Simulated Cmd :{e}")
+            raise
+
+    """ Private Functions """
     def _generate_line_data(self) -> str:
         return ':'.join(map(str, [round(random.uniform(0.0, 1.0), 3) for _ in range(3)]))
     

@@ -2,10 +2,10 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-from common.zmqutils import ZmqBridgeQt
-from common.logger import getmylogger
-from common.messages import TopicMap
-from common.utils import TopicMenu
+from core.zmqutils import ZmqBridgeQt
+from core.logger import getmylogger
+from core.messages import TopicMap
+from core.utils import TopicMenu
 
 
 class Console(QWidget):
@@ -13,7 +13,6 @@ class Console(QWidget):
 
     def __init__(self, topics: tuple[str , ...], parent=None):
         """Constructor method for Console class.
-
         Args:
             topic (str): The topic of the console.
             parent (QWidget, optional): The parent widget. Defaults to None.
@@ -36,7 +35,6 @@ class Console(QWidget):
 
     def closeEvent(self, event):
         """Event handler for closing the console.
-
         Args:
             event (QCloseEvent): The close event.
         """
@@ -82,7 +80,6 @@ class Console(QWidget):
                     self.consoleText.clear()
 
             self.consoleText.append(topic +"    "+data)  # add data to console tab spaced
-
 
 class ConfigConsole(QDialog):
     """Dialog for creating a new console."""

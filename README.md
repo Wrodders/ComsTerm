@@ -69,7 +69,7 @@ These are independent Sub-Apps which can be used standalone or as part of anothe
 Opens, Scans, Closes device files, Parses, Publishes data over ZMQ 
 
 #### **Console** 
-Terminal UI text console for veiwing live topic data streams, multiple topics added in coloums. ***(grepable?)***. 
+Terminal UI text console for viewing live topic data streams, multiple topics added in column. ***(grepable?)***. 
 
 
 ### System
@@ -79,6 +79,15 @@ ZMQ used for PUB-SUB Socket middleware. Communication is done over IPC UNIX doma
 GUI implemented with pyQt6 for quick development. **Find better wy to intergrate zmq and qt loop**. Each GUI has own worker thread that bridges the zmq qt loops. 
 
 
+## Apps
+
+#### **Plotter**
+Plotter subscribes to many different topic data streams, each plot has its own I/O thread. 
+Plots Graphs in realtime or load from csv. 
+Add Multiple Plots in either a new window. 
+Support for Multi Line and bar charts. 
+Support for Applying and plotting filters of different orders.
+Settings Configs scans to obtain publishing trees, verifies arguments are numerical. 
 
 
 

@@ -1,9 +1,9 @@
 from core.device import BaseDevice, DeviceInfo
-from common.zmqutils import ZmqSub, Transport, Endpoint
+from core.zmqutils import ZmqSub, Transport, Endpoint
 
 
 from dataclasses import dataclass
-from common.logger import getmylogger
+from core.logger import getmylogger
 
 @dataclass
 class ZmqInfo(DeviceInfo):

@@ -1,5 +1,5 @@
 import threading
-from common.logger import getmylogger
+from core.logger import getmylogger
 
 """
 @Brief: Worker IO Thread for Devices
