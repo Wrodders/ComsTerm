@@ -37,10 +37,10 @@ class SimulatedDevice(BaseDevice):
     
     def _run(self):
         '''Execute Thread'''
-        self.log.info("Started Simulated Device ")
+        self.log.debug("Started Simulated Device I/O Thread")
         self.publisher.bind()
         self.log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
-        while not self.workerIO.stopEvent.is_set():
+        while (not self.workerIO.stopEvent.is_set()):
             try: # grab data from device 
                 topic, msg = self._generate_msg_for_topic()
                 delim , args = self.pubMap.getTopicFormat(topic)
@@ -62,7 +62,7 @@ class SimulatedDevice(BaseDevice):
 
             time.sleep(self.info.dt)  
 
-        self.log.info("Exit Simulated Interface I/O Thread")
+        self.log.debug("Exit Simulated Interface I/O Thread")
         return # exit thread
     
     # Private Functions

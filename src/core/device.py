@@ -37,11 +37,10 @@ class BaseDevice():
         self.workerIO = Worker(self._run)
         self.cmdQueue = Queue()
         osName = platform.system()
-        print(osName)
         if(osName == "Windows"):
             self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
         elif(osName== "Darwin"  or osName =="Linux"): # mac os
-            self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
+            self.publisher = ZmqPub(Transport.INPROC, Endpoint.COMSTERM)
 
 
         # Create Base Topic Maps
@@ -90,3 +89,4 @@ class BaseDevice():
     
     def _stop(self):
        self.workerIO._stop()
+       self.publisher.close()

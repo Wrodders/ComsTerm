@@ -44,16 +44,22 @@ def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
 class ZmqPub:
     def __init__(self,transport : Transport, endpoint : Endpoint):
         self.log = getmylogger(__name__)
-        self.socketAddress = checkAddress(transport, endpoint)
+        self.socketEndpoint = checkAddress(transport, endpoint)
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.PUB)
 
+
     def bind(self):
-        self.socket.bind(self.socketAddress)
-        self.log.debug(f"Binded ZMQ PUB socket to {self.socketAddress}")
+        self.socket.bind(self.socketEndpoint)
+        self.log.debug(f"Binded ZMQ PUB socket to {self.socketEndpoint}")
 
     def send(self, topic: str, data : str):
         self.socket.send_multipart([topic.encode(), data.encode()])
+
+    def close(self):
+        self.socket.close()
+        self.log.debug(f"Closed ZMQ PUB socket connected to: {self.socketEndpoint}" )
+
 """
 @Brief: ZMQ Subscription socket with added functionality.
 @Description: Creates a SUB Socket with add/remove topics, clean up and logging. 
@@ -114,7 +120,7 @@ class ZmqBridgeQt(QObject):
         if(osName == "Windows"):
             self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
         elif(osName== "Darwin"  or osName =="Linux"): # mac os
-            self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
+            self.subscriber = ZmqSub(Transport.INPROC, Endpoint.COMSTERM)
         else:
             raise NotImplementedError(f"Platform '{osName}' not supported")
         

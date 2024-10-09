@@ -7,65 +7,103 @@ from common.logger import getmylogger
 from common.messages import TopicMap
 from common.utils import TopicMenu
 
+class ConsoleApp(QFrame):
+    def __init__(self, topicMap: TopicMap):
+        super().__init__()
+        self.maxConsoles = 4
+        self.topicMap = topicMap
+        self.consoles = list()
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab_handle)
+
+        self.clear_PB = QPushButton("Clear")
+        self.clear_PB.clicked.connect(self.clear_handle)
+        self.settings_PB = QPushButton("Console Settings")
+        self.settings_PB.clicked.connect(self.settings_handle)
+        self.new_console_PB = QPushButton("New Console")
+        self.new_console_PB.clicked.connect(self.new_console_handle)
+
+        grid = QGridLayout()
+        self.setLayout(grid)
+        grid.addWidget(self.tabs, 0,0, 2, 4)
+        grid.addWidget(self.settings_PB, 4, 0, 1,1)
+        grid.addWidget(self.clear_PB, 4,1, 1,1)
+        grid.addWidget(self.new_console_PB, 4,2,1,1)
+        self.setMinimumSize(100,350)
+
+    def close(self):
+        for console in self.consoles:
+            console.close()
+    
+    def close_tab_handle(self, index):
+        active_console = self.tabs.widget(index)
+        if(isinstance(active_console, Console)):
+            active_console.close()
+            self.tabs.removeTab(index)
+
+    def clear_handle(self):
+        active_console = self.tabs.currentWidget()
+        if(isinstance(active_console, Console)):
+            active_console.clear()
+    
+    def settings_handle(self):
+        active_console = self.tabs.currentWidget()
+        if(isinstance(active_console, Console)):
+            print("Settings")
+
+    def new_console_handle(self):
+         if(self.tabs.count() <= self.maxConsoles):
+            diag = ConfigConsole(self.topicMap)
+            if diag.exec() == True:
+                protocol = diag.topicMenu.saveProtocol()
+                console = Console()
+                console.config(topics=protocol, name="Console")
+                self.consoles.append(console)
+                self.tabs.addTab(console, console.name)
+
+
+
+
 
 class Console(QWidget):
     """Widget representing a console for displaying messages."""
 
-    def __init__(self, topics: tuple[str , ...], parent=None):
-        """Constructor method for Console class.
-
-        Args:
-            topic (str): The topic of the console.
-            parent (QWidget, optional): The parent widget. Defaults to None.
-        """
-        super(Console, self).__init__(parent)
-
+    def __init__(self):
+        super().__init__()
         self.log = getmylogger(__name__)
-
-        self.setGeometry(100, 100, 300, 300)
-        self.topics = topics
-        self.setWindowTitle("console")
+        self.name = "Console"
+        self.topics = tuple()
         self.initUI()
-        self.log.debug(f"Opened Console {topics}")
         self.zmqBridge = ZmqBridgeQt() 
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
-        [self.zmqBridge.subscriber.addTopicSub(t) for t in self.topics]
 
-        
-
-    def closeEvent(self, event):
-        """Event handler for closing the console.
-
-        Args:
-            event (QCloseEvent): The close event.
-        """
-        self.log.debug(f"Closing Console {self.topics}")
+    def close(self):
+        self.log.debug(f"Closing Console {self.name}")
         self.zmqBridge.workerIO._stop()  # stop device thread
-        event.accept()
+
+    def config(self, topics: tuple[str , ...], name : str):
+        self.name = name
+        self.topics = topics
+        [self.zmqBridge.subscriber.addTopicSub(t) for t in self.topics]
 
     def initUI(self):
         """Initializes the user interface."""
         self.setMinimumWidth(300)
         # Create Layout
         self.vBox = QVBoxLayout()
-        self.vBox.setContentsMargins(5, 5, 5, 5)
+        self.vBox.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.vBox)
-
-        self.configBtn = QPushButton("Settings")
-        self.configBtn.setMaximumWidth(300)
 
         self.consoleText = QTextEdit()
         self.consoleText.setReadOnly(True)
         self.consoleText.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.consoleText.setAcceptRichText(True)
         self.consoleText.setStyleSheet("background-color: black; color: green;")
-
-        # Add Widgets to Layout
         self.vBox.addWidget(self.consoleText)
-        self.vBox.addWidget(self.configBtn)
 
-    def clearConsole(self):
+    def clear(self):
         """Clears the console."""
         self.consoleText.clear()
 

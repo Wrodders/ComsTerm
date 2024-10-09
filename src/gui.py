@@ -132,7 +132,7 @@ class GUI(QWidget):
 
     def connectHandle(self):
         if isinstance(self.comsTerm.device, BaseDevice):
-            err = QMessageBox.information(self, "Info", f"Already Connected")
+            err = QMessageBox.information(self, "Info", f"A Device is Already Connected")
         else:
             self.comsTerm.newDevice(self.deviceCon.getValues())
             self.devLabel.setText(f"Device : Connected") 

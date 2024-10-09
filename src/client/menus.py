@@ -11,36 +11,24 @@ from core.ZmqDevice import ZmqInfo
 from common.zmqutils import Transport, Endpoint
 
 
-class SettingsMenu(QFrame):
-
+class DeviceConfig(QDialog):
     def __init__(self):
         super().__init__()
-
-        self.initUI()
-
-    def initUI(self):
-        pass
-
-"""
-New Device Config UI
-"""
-
-class DeviceConfig(QWidget):
-    def __init__(self):
-        super(DeviceConfig, self).__init__()
+        self.setWindowTitle("Device Connections")
         self.grid = QGridLayout()
         self.setMinimumWidth(350)
 
         self.serialConfig = SerialConfig()
         self.simConfig = SimConfig()
 
-        
         self.stackLayout = QStackedLayout()
         self.stackLayout.addWidget(self.serialConfig)
         self.stackLayout.addWidget(self.simConfig)
         self.connectBtn = QPushButton("Connect")
+        self.connectBtn.clicked.connect(self.accept)
         self.connectBtn.setMaximumWidth(350)
         self.disconnectBtn = QPushButton("Disconnect")
+        self.disconnectBtn.clicked.connect(self.reject)
         self.disconnectBtn.setMaximumWidth(350)
         self.conDeviceCB = QComboBox()
         self.conDeviceCB.setMaximumWidth(350)
@@ -58,7 +46,6 @@ class DeviceConfig(QWidget):
         self.stackLayout.setCurrentIndex(index)
 
     def getValues(self) -> DeviceInfo:
-
         if self.conDeviceCB.currentText() == Devices.SERIAL.name:
             port = self.serialConfig.portCB.currentText()
             baud = self.serialConfig.baudRate.currentText()
@@ -68,7 +55,7 @@ class DeviceConfig(QWidget):
             rate = self.simConfig.rateCB.currentText()
             devInfo = SimInfo(dt=1/float(rate))
         return devInfo
-
+    
 
 
 class SerialConfig(QFrame):
@@ -81,7 +68,8 @@ class SerialConfig(QFrame):
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QGridLayout()
-        
+        self.scan_Btn = QPushButton("Scan Ports")
+        self.scan_Btn.clicked.connect(self.scan_handle)
         layout.addWidget(QLabel("Serial Port:"), 0, 0)
         self.portCB = QComboBox()
         self.portCB.addItems(scanUSB())
@@ -95,7 +83,8 @@ class SerialConfig(QFrame):
         self.parity.addItems(["None", "Even", "Odd", "Mark", "Space"])
         self.rts_cts = QCheckBox()
         self.dtr_dsr = QCheckBox()
-        
+
+
         layout.addWidget(self.portCB, 0, 1)
         layout.addWidget(QLabel("Baud Rate:"), 1, 0)
         layout.addWidget(self.baudRate, 1, 1)
@@ -109,6 +98,8 @@ class SerialConfig(QFrame):
         layout.addWidget(self.rts_cts, 5, 1)
         layout.addWidget(QLabel("DTR/DSR:"), 6, 0)
         layout.addWidget(self.dtr_dsr, 6, 1)
+        layout.addWidget(self.scan_Btn, 7, 0, 1,2)
+        
 
         self.setLayout(layout)
 
@@ -117,6 +108,11 @@ class SerialConfig(QFrame):
     
     def getBaud(self)-> int:
         return int(self.baudRate.currentText())
+    
+    def scan_handle(self):
+        self.portCB.clear()
+        self.portCB.addItems(scanUSB())
+
 
 class TCPConfig(QFrame):
     def __init__(self):

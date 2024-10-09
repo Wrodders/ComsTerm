@@ -13,7 +13,7 @@ class ComsTerm():
     """ Back End handler """
     def __init__(self):
         self.log = getmylogger(__name__)
-        self.device = None
+        self.device = BaseDevice()
 
     def newDevice(self, deviceInfo: DeviceInfo):
         if isinstance(deviceInfo, SerialInfo):
@@ -27,9 +27,8 @@ class ComsTerm():
                 self.device = None
                 return False
             else:
-                    return True
+                return True
             
-
     def stopDevice(self):
         if(isinstance(self.device, BaseDevice)):
               self.device._stop()

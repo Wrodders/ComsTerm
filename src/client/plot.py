@@ -19,12 +19,68 @@ Plot:   Subscribes to topics publishing data over ZMQ.
         Topic data treated as a data series for plotting and graphing.   
         Add and remove DataSeries dynamically. 
 """
+class PlotApp(QFrame):
+    def __init__(self, topicMap : TopicMap):
+        super().__init__()
+        self.maxPlots = 4
+        self.topicMap = topicMap
+        self.plots = list()
+        self.initUI()
+
+    def initUI(self):
+        self.grid = QGridLayout()
+        self.setLayout(self.grid)
+
+        self.newPlot_PB = QPushButton("New Plot")
+        self.newPlot_PB.clicked.connect(self.new_handle)
+        self.plotSettings_PB = QPushButton("Settings")
+        self.plotSettings_PB.clicked.connect(self.settings_handle)
+        self.record_PB = QPushButton("Record")
+        self.record_PB.clicked.connect(self.record_handle)
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_plt_handle)
+        self.tabs.setTabPosition(QTabWidget.TabPosition.South)
+
+        self.grid.addWidget(self.tabs, 1, 0, 4, 4)
+        self.grid.addWidget(self.newPlot_PB, 0, 0)
+        self.grid.addWidget(self.plotSettings_PB, 0, 1)
+        self.grid.addWidget(self.record_PB, 0,2)
+
+    def close(self):
+        for plot in self.plots:
+            plot.close()
+
+    def new_handle(self):
+        if(self.tabs.count() <= self.maxPlots):
+            diag = CreatePlot(self.topicMap)
+            if diag.exec() == True:
+                protocol = diag.topicMenu.saveProtocol()
+                yRange = (float(diag.topicMenu.yMin.text()) , float(diag.topicMenu.yMax.text()))
+                plot = LinePlot()
+                plot.config(protocol=protocol, yrange=yRange,xrange=100)
+                self.plots.append(plot)
+                self.tabs.addTab(plot, plot.name)
+
+    def close_plt_handle(self, index):
+        active_plot = self.tabs.widget(index)
+        if(isinstance(active_plot, BasePlot)):
+            active_plot.close()
+            self.tabs.removeTab(index)
+
+
+    def settings_handle(self):
+        print("Settings")
+
+    def record_handle(self):
+        print("record")
 
 class BasePlot(QFrame):
     """Base class for plotting."""
     def __init__(self):
         """Constructor method for BasePlot class."""
         super().__init__()
+        self.name = ""
         self.log = getmylogger(__name__)
         self.zmqBridge = ZmqBridgeQt() 
 
@@ -34,40 +90,32 @@ class BasePlot(QFrame):
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[str, str]):
         raise NotImplementedError("Subclasses must implement updateData method")
+    
+    def close(self):
+        self.log.debug(f"Closing Plot {self.name}")
+        self.zmqBridge.workerIO._stop()  # stop device thread
 
 
 class LinePlot(BasePlot):
     """Class for line plotting."""
-    def __init__(self, yrange: tuple[float, float], xrange: int, protocol: tuple[str, ...]):
+    def __init__(self):
         """Constructor method for LinePlot class."""
         super().__init__()  
+        self.name = "Line Plot"
+        self.x_len = int()
+        self.y_range = tuple()
+        self.protocol = tuple()
+        self.dataSet = dict()
+        self.lines = list()
+        self.initUI()
+
+
+
+    def config(self, yrange: tuple[float, float], xrange: int, protocol: tuple[str, ...]):
         self.x_len = xrange
         self.y_range = yrange
         self.protocol = protocol
-        self.dataSet = dict()
-        self.lines = list()
 
-        self.initUI()
-        self.connectSignals()
-
-    def closeEvent(self, event):
-        """Event handler for closing the console.
-
-        Args:
-            event (QCloseEvent): The close event.
-        """
-        self.log.debug(f"Closing Plot {self.protocol}")
-        self.zmqBridge.workerIO._stop()  # stop device thread
-        event.accept()
-
-    def initUI(self):
-        """Initializes the user interface."""
-            # Create a figure and axis for the plot
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(1,1,1)
-        self.ax.grid(linestyle='dashed', linewidth=0.5)
-
-        # Initialize the plot
         self.xs = list(range(0, self.x_len)) # time series (x-axis)
         self.ax.set_ylim(self.y_range) 
 
@@ -77,60 +125,29 @@ class LinePlot(BasePlot):
             line, = self.ax.plot(self.xs, self.dataSet[label], label=label )  # create a line on the plot
             self.lines.append(line)
         self.ax.legend(loc=1)
-        # matplotlib timer animation
+         # matplotlib timer animation
         self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), 
                                                   interval=200, blit=False, cache_frame_data=False)
 
-
+    def initUI(self):
+        """Initializes the user interface."""
+        # Create a figure and axis for the plot
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(1,1,1)
+        self.ax.grid(linestyle='dashed', linewidth=0.5)
+        # Widgets
         self.canvas = FigureCanvas(self.fig)
-        self.settingsB = QPushButton("Plot Settings")
-        self.cursorsB = QPushButton("Cursors")
-        self.cursorsB.setCheckable(True)
-        self.clearB = QPushButton("Clear")
-        self.recordB = QPushButton("Start Record")
-        self.recordB.setCheckable(True)
-        self.filterB = QPushButton("Filters")
-
         layout = QGridLayout()
-        layout.addWidget(self.settingsB, 0, 0)
-        layout.addWidget(self.cursorsB, 0, 1)
-        layout.addWidget(self.clearB, 0, 2)
-        layout.addWidget(self.recordB, 0, 3)
-        layout.addWidget(self.filterB, 0, 4)
-        layout.addWidget(self.canvas, 1, 0, 5, 5)
+        layout.addWidget(self.canvas, 0, 0, 5, 5)
         self.setLayout(layout)
         self.setContentsMargins(0, 0, 0, 0)
-        self.setMinimumSize(300, 300)
-
-    def connectSignals(self):
-        """Connects signals to slots."""
-        self.settingsB.clicked.connect(self.settingsHandle)
-
-
-    def settingsHandle(self):
-        """Handles opening settings."""
-        pass
-
-    def cursorsHandle(self):
-        """Handles cursor actions."""
-        pass
-
-    def clearHandle(self):
-        """Handles clearing the plot."""
-        pass
-
-    def recordHandle(self):
-        """Handles recording."""
-        pass
-
-    def filterHandle(self):
-        """Handles filtering."""
-        pass
-
+        self.setMinimumSize(600,300)
+      
 
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[tuple, str]):
        # Grabs msg data from the worker thread
+       
         topic, data = msg
         try:
             self.dataSet[topic].append(float(data))   
@@ -153,7 +170,6 @@ class CreatePlot(QDialog):
         super().__init__()
         self.pubMap = topicMap
         self.initUI()
-
         self.maxDataSeries = 8
 
     def initUI(self):

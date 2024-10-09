@@ -32,10 +32,13 @@ class SerialDevice(BaseDevice):
         self.cmdMap.register(topicName="START", topicArgs=[], delim="")
         self.cmdMap.register(topicName="LINE", topicArgs=[], delim="")
         self.cmdMap.register(topicName="TURN", topicArgs=[], delim="")
-
-        self.pubMap.register(topicName="MOTOR", topicArgs=["L", "R", "TL","TR","OL", "OR"], delim=":")
-        self.pubMap.register(topicName="LINE", topicArgs=["L", "C", "R" ], delim=":")
-
+        
+        self.pubMap.register(topicName="CMD_RET", topicArgs=[], delim=":")
+        self.pubMap.register(topicName="ERROR", topicArgs=[], delim=":")
+        self.pubMap.register(topicName="INFO", topicArgs=[], delim=":")
+        self.pubMap.register(topicName="DEBUG", topicArgs=[], delim=":")
+        self.pubMap.register(topicName="IMU", topicArgs=["RP", "CR", "KP","RR","CP", "KR"], delim=":")
+     
         self.port = serial.Serial() # Data input
         self.connect()
 
@@ -55,9 +58,6 @@ class SerialDevice(BaseDevice):
         
 
     def _run(self):
-        """
-        @Brief: Serial IO Thread
-        """
         self.log.debug("Started Serial Interface I/O Thread")
         self.publisher.bind()
         while (not self.workerIO.stopEvent.is_set()) and self.port.is_open:
@@ -72,9 +72,6 @@ class SerialDevice(BaseDevice):
         self.disconnect()
     
     def readDevice(self):
-        """
-        @Brief: Reads a message from a device, parses and publishes over its topic.
-        """
         try: 
             # Read ASCII Message
             msgPacket = self.port.readline()
@@ -94,11 +91,14 @@ class SerialDevice(BaseDevice):
             recvMsg = MsgFrame.extractMsg(msg)        
             topic = self.pubMap.getTopicByID(recvMsg.ID)
             if isinstance(topic, Topic):
-                if topic.name != "": 
-                    delim , args = self.pubMap.getTopicFormat( topic.name)
-                    msgArgs = recvMsg.data.split(delim)
-                    msgSubTopics = [( topic.name + "/" + arg) for arg in args]
-                    [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                if topic != None: 
+                    if(topic.nArgs > 0):
+                        msgArgs = recvMsg.data.split(topic.delim)
+                        msgSubTopics = [( topic.name + "/" + arg) for arg in topic.args]
+                        [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                    else:
+                        self.publisher.send(topic.name + "/", recvMsg.data)
+                        print(topic.name, recvMsg.data)
         except UnicodeDecodeError as e:
             self.log.warning(f"{e} {msgPacket}")
             return 
@@ -107,9 +107,6 @@ class SerialDevice(BaseDevice):
             raise 
 
     def writeDevice(self):
-        """
-        @Brief: Writes cmds from the queue to the device.
-        """
         #Service CmdMsg Queue And Transmit MsgFrame over Serial
         try:
             cmdPacket = self.cmdQueue.get_nowait()
