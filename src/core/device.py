@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from common.logger import getmylogger
 
 from common.worker import Worker
-from common.messages import TopicMap
+from common.messages import TopicMap, Topic, MsgFrame
 from common.zmqutils import ZmqPub,Transport, Endpoint
 
 
@@ -14,12 +14,12 @@ from common.zmqutils import ZmqPub,Transport, Endpoint
 class Devices(Enum):
     SERIAL = 0
     SIMULATED = 1
+    ZMQ=2
 
 @dataclass
 class DeviceInfo():
     name : str = ""
     devType : Devices = Devices.SIMULATED
-    status : bool = False
     threadId : str = ""
     
 """
@@ -33,8 +33,8 @@ class BaseDevice():
         self.log = getmylogger(__name__)
 
         self.info = DeviceInfo()
-
         self.workerIO = Worker(self._run)
+        self.info.threadId = self.workerIO.wThread.name
         self.cmdQueue = Queue()
         osName = platform.system()
         if(osName == "Windows"):
@@ -46,6 +46,16 @@ class BaseDevice():
         # Create Base Topic Maps
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
+
+    def pubMsgSubTopics(self, topic: Topic, data:str):
+        if isinstance(topic, Topic):
+            if topic != None: 
+                if(topic.nArgs > 0):
+                    msgArgs = data.split(topic.delim)
+                    msgSubTopics = [( topic.name + "/" + arg) for arg in topic.args]
+                    [self.publisher.send(topic=msgSubTopics[i], data=msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                else:
+                    self.publisher.send(topic=(topic.name + "/"), data=data)
 
 
     def parseCmd(self, text: str) -> str:
@@ -88,5 +98,4 @@ class BaseDevice():
         raise NotImplementedError("Subclasses must implement start method")
     
     def _stop(self):
-       self.workerIO._stop()
-       self.publisher.close()
+        raise NotADirectoryError("Subclass must implement _stop method")

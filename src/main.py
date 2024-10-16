@@ -67,7 +67,7 @@ class GUI(QWidget):
                 err = QMessageBox.information(self, "Info", f"A Device is Already Connected")
             else:
                 self.comsTerm.newDevice(diag.getValues())
-                self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.devType.name}")
+                self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.devType.value}: Connected")
                 self.plotApp.topicMap = self.comsTerm.device.pubMap
                 self.consoleApp.topicMap = self.comsTerm.device.pubMap
         else: 

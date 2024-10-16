@@ -20,10 +20,12 @@ class DeviceConfig(QDialog):
 
         self.serialConfig = SerialConfig()
         self.simConfig = SimConfig()
+        self.zmqConfig = ZMQConfig()
 
         self.stackLayout = QStackedLayout()
         self.stackLayout.addWidget(self.serialConfig)
         self.stackLayout.addWidget(self.simConfig)
+        self.stackLayout.addWidget(self.zmqConfig)
         self.connectBtn = QPushButton("Connect")
         self.connectBtn.clicked.connect(self.accept)
         self.connectBtn.setMaximumWidth(350)
@@ -54,6 +56,13 @@ class DeviceConfig(QDialog):
         elif self.conDeviceCB.currentText() == Devices.SIMULATED.name:
             rate = self.simConfig.rateCB.currentText()
             devInfo = SimInfo(dt=1/float(rate))
+       
+        elif self.conDeviceCB.currentText() == Devices.ZMQ.name:
+            cTP = self.zmqConfig.clientSide_transportCB.currentText()
+            cEP = self.zmqConfig.clientSide_endpointCB.currentText()
+            devInfo = ZmqInfo(clientSide_endpoint= Endpoint(cEP), clientSide_transport=Transport(cTP))
+
+            
         return devInfo
     
 
@@ -158,13 +167,13 @@ class ZMQConfig(QFrame):
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Socket Endpoint:"))
-        self.transportCB = QComboBox()
-        self.transportCB.addItems(Transport._member_names_)
-        self.endpointCB = QComboBox()
-        self.endpointCB.addItems(Endpoint._member_names_)
-        layout.addWidget(self.transportCB)
-        layout.addWidget(self.endpointCB)
+        self.clientSide_transportCB = QComboBox()
+        self.clientSide_transportCB.addItems([transport.value for transport in Transport])
+        self.clientSide_endpointCB = QComboBox()
+        self.clientSide_endpointCB.addItems([endpoint.value for endpoint in Endpoint])
+        layout.addWidget(QLabel("Client Side Connection"))
+        layout.addWidget(self.clientSide_transportCB)
+        layout.addWidget(self.clientSide_endpointCB)
         self.setLayout(layout)
 
 
@@ -185,3 +194,5 @@ class SimConfig(QFrame):
         layout.addWidget(QLabel("[per s]"), 0, 2, 1,1)
 
         self.setLayout(layout)
+
+  

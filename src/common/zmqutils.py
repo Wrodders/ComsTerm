@@ -21,10 +21,11 @@ class Transport(Enum):
 
 class Endpoint(Enum):
     COMSTERM = "comsterm"
-    PISTREAM = "piStream.local"
+    PISERVER = "raspberrypi.local:5555"
+    DBOT = "dbot.local:5555"
     LOOPBACK = "127.0.0.1:5555"
 
-def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
+def buildAddress(transport: Transport, endpoint: Endpoint) -> str:
     if transport == Transport.TCP:
         # Example: tcp://127.0.0.1:5555
         return f"{transport.value}://{endpoint.value}"
@@ -44,21 +45,27 @@ def checkAddress(transport: Transport, endpoint: Endpoint) -> str:
 class ZmqPub:
     def __init__(self,transport : Transport, endpoint : Endpoint):
         self.log = getmylogger(__name__)
-        self.socketEndpoint = checkAddress(transport, endpoint)
+        self.socketEndpoint = buildAddress(transport, endpoint)
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.PUB)
-
-
     def bind(self):
         self.socket.bind(self.socketEndpoint)
         self.log.debug(f"Binded ZMQ PUB socket to {self.socketEndpoint}")
 
     def send(self, topic: str, data : str):
-        self.socket.send_multipart([topic.encode(), data.encode()])
+        if(isinstance(topic, str)):
+            topic_b = topic.encode()
+        else: 
+            topic_b = topic
+        if(isinstance(data, str)):
+            data_b = data.encode()
+        else: 
+            data_b = data
+        self.socket.send_multipart([topic_b, data_b])
 
     def close(self):
         self.socket.close()
-        self.log.debug(f"Closed ZMQ PUB socket connected to: {self.socketEndpoint}" )
+        self.log.debug(f"Closed ZMQ PUB socket binded to: {self.socketEndpoint}" )
 
 """
 @Brief: ZMQ Subscription socket with added functionality.
@@ -67,19 +74,21 @@ class ZmqPub:
 class ZmqSub:
     def __init__(self, transport : Transport, endpoint : Endpoint):
         self.log = getmylogger(__name__)
-        self.socketEndpoint = checkAddress(transport, endpoint)
+        self.socketAddress = buildAddress(transport, endpoint)
         self.context = zmq.Context.instance()
         self.socket = self.context.socket(zmq.SUB)
         self.topicList = []
 
     def connect(self):
-        self.socket.connect(self.socketEndpoint)
-        self.log.debug(f"Connected ZMQ SUB socket to: {self.socketEndpoint}")
+        self.socket.connect(self.socketAddress)
+        self.log.debug(f"Connected ZMQ SUB socket to: {self.socketAddress}")
 
     def addTopicSub(self, topic : str):
         if topic not in self.topicList:
             self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
             self.topicList.append(topic)
+            if(topic==""):
+                topic = "*"
             self.log.debug(f"ZMQ SUB Subscribed to {topic}")
 
     def removeTopic(self, topic : str):
@@ -104,28 +113,31 @@ class ZmqSub:
 
     def close(self):
         self.socket.close()
-        self.log.debug(f"Closed ZMQ SUB socket connected to: {self.socketEndpoint}" )
+        self.log.debug(f"Closed ZMQ SUB socket connected to: {self.socketAddress}" )
 
 
 """
 @Brief: ZMQ Subscription End Point for Qt Components
 
 """
+class ZmqServer():
+    def __init__(self):
+        super().__init__()
+        self.log = getmylogger(__name__)
+        self.context = zmq.Context.instance()
+        self.dealer = self.context.socket(zmq.DEALER)
+     
+
+        
+
+
 class ZmqBridgeQt(QObject):
     msgSig = pyqtSignal(tuple)
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
-        osName = platform.system()
-        if(osName == "Windows"):
-            self.subscriber = ZmqSub(Transport.TCP, Endpoint.LOOPBACK)
-        elif(osName== "Darwin"  or osName =="Linux"): # mac os
-            self.subscriber = ZmqSub(Transport.INPROC, Endpoint.COMSTERM)
-        else:
-            raise NotImplementedError(f"Platform '{osName}' not supported")
-        
+        self.subscriber = ZmqSub(Transport.INPROC, Endpoint.COMSTERM)
         self.workerIO = Worker(self._run)
-
         
        
     def _run(self):

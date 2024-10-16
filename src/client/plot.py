@@ -171,7 +171,6 @@ class CreatePlot(QDialog):
         self.pubMap = topicMap
         self.initUI()
         self.maxDataSeries = 8
-
     def initUI(self):
         """Initializes the user interface."""
         self.setWindowTitle("New Plot")

@@ -20,6 +20,8 @@ class ComsTerm():
             self.device = SerialDevice(deviceInfo)
         elif isinstance(deviceInfo, SimInfo):
             self.device = SimulatedDevice(deviceInfo)
+        elif isinstance(deviceInfo, ZmqInfo):
+            self.device = ZmqDevice(deviceInfo)
             
         if(isinstance(self.device, BaseDevice)):
             if self.device._start() == False:
@@ -32,5 +34,4 @@ class ComsTerm():
     def stopDevice(self):
         if(isinstance(self.device, BaseDevice)):
               self.device._stop()
-              del(self.device)
               self.device = None

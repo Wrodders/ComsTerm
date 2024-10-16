@@ -35,6 +35,12 @@ class SimulatedDevice(BaseDevice):
         self.workerIO._begin()
         return True
     
+    def _stop(self):
+        self.workerIO._stop()
+        self.publisher.close()
+
+
+    
     def _run(self):
         '''Execute Thread'''
         self.log.debug("Started Simulated Device I/O Thread")

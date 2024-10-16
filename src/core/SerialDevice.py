@@ -14,14 +14,6 @@ class SerialInfo(DeviceInfo):
     port : str = ""
     baudRate : int = 115200
 
-
-'''
-@Brief: Connects and Reads Data from Serial Port. 
-
-@Description:   Scans for available ports by Key, (default 'usb'),
-                opens thread and connects to port, reads lines terminating in '\n'
-                sends data to Qt Event loop via pyqtSignal.
-'''
 class SerialDevice(BaseDevice):
     def __init__(self, info: SerialInfo):
         super().__init__()
@@ -52,10 +44,12 @@ class SerialDevice(BaseDevice):
             self.log.debug(f"Serial I/O Thread not started")
             return False
         
-        self.info.status = True
         self.workerIO._begin()  
         return True
         
+    def _stop(self):
+        self.workerIO._stop()
+        self.publisher.close()
 
     def _run(self):
         self.log.debug("Started Serial Interface I/O Thread")
@@ -87,18 +81,10 @@ class SerialDevice(BaseDevice):
             raise 
 
         try:
-            #Decode Message
-            recvMsg = MsgFrame.extractMsg(msg)        
-            topic = self.pubMap.getTopicByID(recvMsg.ID)
-            if isinstance(topic, Topic):
-                if topic != None: 
-                    if(topic.nArgs > 0):
-                        msgArgs = recvMsg.data.split(topic.delim)
-                        msgSubTopics = [( topic.name + "/" + arg) for arg in topic.args]
-                        [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
-                    else:
-                        self.publisher.send(topic.name + "/", recvMsg.data)
-                        print(topic.name, recvMsg.data)
+            #Decode Message Publish Data under Arg SubTopic
+            recvMsg = MsgFrame.extractMsg(msg)    
+            topic = self.pubMap.getTopicByID(recvMsg.ID)    
+            self.pubMsgSubTopics(topic=topic, data=recvMsg.data)
         except UnicodeDecodeError as e:
             self.log.warning(f"{e} {msgPacket}")
             return 
