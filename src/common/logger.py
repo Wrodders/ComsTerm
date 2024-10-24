@@ -1,6 +1,6 @@
 import logging
 
-def getmylogger(name) -> logging.getLogger():
+def getmylogger(name) -> logging.Logger:
     if logging.getLogger(name).handlers:
         # Logger already configured, return existing logger
         return logging.getLogger(name)

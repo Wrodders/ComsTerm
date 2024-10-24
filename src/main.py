@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import *
 import sys
 
 from common.logger import getmylogger
+from common.messages import TopicMap
 
 from core.device import BaseDevice 
 from core.comsTerm import ComsTerm
@@ -14,6 +15,7 @@ from client.commander import Commander
 from client.controls import CmdBtnFrame
 from client.menus import DeviceConfig
 
+
 class GUI(QWidget):
     def __init__(self):
         super().__init__()
@@ -22,8 +24,9 @@ class GUI(QWidget):
         self.windows = list()
         # Applications
         self.comsTerm = ComsTerm()
-        self.plotApp = PlotApp(topicMap=self.comsTerm.device.pubMap)
-        self.consoleApp = ConsoleApp(topicMap=self.comsTerm.device.pubMap)
+        self.commanderApp = Commander()
+        self.plotApp = PlotApp()
+        self.consoleApp = ConsoleApp()
         self.initUI()
     def closeEvent(self, event):
         self.plotApp.close()
@@ -46,17 +49,20 @@ class GUI(QWidget):
         conLayout.addWidget(self.dev_lbl)
         conLayout.addWidget(self.connections_PB)
 
+        rFrame = QFrame()
+        vbox = QVBoxLayout()
+        rFrame.setLayout(vbox)
         self.splitV = QSplitter(Qt.Orientation.Vertical)
+        
         self.splitV.setChildrenCollapsible(False)
-
-        self.splitV.addWidget(conFrame)
-        self.splitV.addWidget(QFrame())
+        self.splitV.addWidget(self.commanderApp)
         self.splitV.addWidget(self.consoleApp)
-
+        vbox.addWidget(conFrame)
+        vbox.addWidget(self.splitV)
         self.splitH = QSplitter(Qt.Orientation.Horizontal)
         self.splitH.setChildrenCollapsible(False)
         self.splitH.addWidget(self.plotApp)
-        self.splitH.addWidget(self.splitV)
+        self.splitH.addWidget(rFrame)
         
         self.hBox.addWidget(self.splitH)
 
@@ -67,9 +73,10 @@ class GUI(QWidget):
                 err = QMessageBox.information(self, "Info", f"A Device is Already Connected")
             else:
                 self.comsTerm.newDevice(diag.getValues())
-                self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.devType.value}: Connected")
-                self.plotApp.topicMap = self.comsTerm.device.pubMap
-                self.consoleApp.topicMap = self.comsTerm.device.pubMap
+                if(isinstance(self.comsTerm.device, BaseDevice)):
+                    self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.devType.value}: Connected")
+                    self.plotApp.topicMap = self.comsTerm.device.pubMap
+                    self.consoleApp.topicMap = self.comsTerm.device.pubMap
         else: 
             self.comsTerm.stopDevice()
             self.dev_lbl.setText("Device : None")

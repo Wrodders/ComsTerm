@@ -41,22 +41,27 @@ class BaseDevice():
             self.publisher = ZmqPub(Transport.TCP, Endpoint.LOOPBACK)
         elif(osName== "Darwin"  or osName =="Linux"): # mac os
             self.publisher = ZmqPub(Transport.INPROC, Endpoint.COMSTERM)
-
-
         # Create Base Topic Maps
         self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
 
-    def pubMsgSubTopics(self, topic: Topic, data:str):
-        if isinstance(topic, Topic):
-            if topic != None: 
-                if(topic.nArgs > 0):
-                    msgArgs = data.split(topic.delim)
-                    msgSubTopics = [( topic.name + "/" + arg) for arg in topic.args]
-                    [self.publisher.send(topic=msgSubTopics[i], data=msgArgs[i]) for i, _ in enumerate(msgArgs)]
-                else:
-                    self.publisher.send(topic=(topic.name + "/"), data=data)
+    def _run(self):
+        raise NotImplementedError("Subclasses must implement _run method")
+    
+    def _start(self) -> bool:
+        raise NotImplementedError("Subclasses must implement start method")
+    
+    def _stop(self):
+        raise NotADirectoryError("Subclass must implement _stop method")
 
+    def pubMsgSubTopics(self, topic: Topic, data:str):
+        if topic != None: 
+            if(topic.nArgs > 0):
+                msgArgs = data.split(topic.delim)
+                msgSubTopics = [( topic.name + "/" + arg) for arg in topic.args]
+                [self.publisher.send(topic=msgSubTopics[i], data=msgArgs[i]) for i, _ in enumerate(msgArgs)]
+            else:
+                self.publisher.send(topic=(topic.name + "/"), data=data)
 
     def parseCmd(self, text: str) -> str:
         cmdParts = text.split(" ", 1) # cmdName arguments
@@ -89,13 +94,3 @@ class BaseDevice():
         packet = self.parseCmd(text)
         if packet != "":
             self.cmdQueue.put(packet)
-
-    
-    def _run(self):
-        raise NotImplementedError("Subclasses must implement _run method")
-    
-    def _start(self) -> bool:
-        raise NotImplementedError("Subclasses must implement start method")
-    
-    def _stop(self):
-        raise NotADirectoryError("Subclass must implement _stop method")

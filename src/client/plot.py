@@ -20,10 +20,11 @@ Plot:   Subscribes to topics publishing data over ZMQ.
         Add and remove DataSeries dynamically. 
 """
 class PlotApp(QFrame):
-    def __init__(self, topicMap : TopicMap):
+    def __init__(self):
         super().__init__()
+        self.log = getmylogger(__name__)
         self.maxPlots = 4
-        self.topicMap = topicMap
+        self.topicMap = None
         self.plots = list()
         self.initUI()
 
@@ -53,14 +54,17 @@ class PlotApp(QFrame):
 
     def new_handle(self):
         if(self.tabs.count() <= self.maxPlots):
-            diag = CreatePlot(self.topicMap)
-            if diag.exec() == True:
-                protocol = diag.topicMenu.saveProtocol()
-                yRange = (float(diag.topicMenu.yMin.text()) , float(diag.topicMenu.yMax.text()))
-                plot = LinePlot()
-                plot.config(protocol=protocol, yrange=yRange,xrange=100)
-                self.plots.append(plot)
-                self.tabs.addTab(plot, plot.name)
+            if(isinstance(self.topicMap, TopicMap)):
+                diag = CreatePlot(self.topicMap)
+                if diag.exec() == True:
+                    protocol = diag.topicMenu.saveProtocol()
+                    yRange = (float(diag.topicMenu.yMin.text()) , float(diag.topicMenu.yMax.text()))
+                    plot = LinePlot()
+                    plot.config(protocol=protocol, yrange=yRange,xrange=100)
+                    self.plots.append(plot)
+                    self.tabs.addTab(plot, plot.name)
+            else:
+                self.log.error("No Valid TopicMap")
 
     def close_plt_handle(self, index):
         active_plot = self.tabs.widget(index)
@@ -83,7 +87,6 @@ class BasePlot(QFrame):
         self.name = ""
         self.log = getmylogger(__name__)
         self.zmqBridge = ZmqBridgeQt() 
-
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
 

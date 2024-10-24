@@ -1,6 +1,7 @@
 from core.device import BaseDevice, DeviceInfo
 from common.zmqutils import ZmqSub, ZmqPub, Transport, Endpoint
 from common.worker import Worker
+from common.messages import Topic
 
 
 from dataclasses import dataclass
@@ -51,7 +52,8 @@ class ZmqDevice(BaseDevice):
             try:
                 topic, data = self.sub.socket.recv_multipart()
                 topic = self.pubMap.getTopicByName(topic.decode())
-                self.pubMsgSubTopics(topic=topic, data=data.decode())
+                if isinstance(topic, Topic):
+                    self.pubMsgSubTopics(topic=topic, data=data.decode())
             except Exception as e:
                     self.log.warning(f"Exception in ZmqDeviceRun:{e} ")
                     pass

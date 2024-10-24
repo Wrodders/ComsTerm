@@ -34,16 +34,11 @@ class SerialDevice(BaseDevice):
         self.port = serial.Serial() # Data input
         self.connect()
 
-    def _start(self) -> bool:
-        """
-        @Brief: Starts Worker IO Thread to read and write from serial port
-        @Description: Scans for usb ports and connects to the first one
-        """        
+    def _start(self) -> bool:   
         if self.port.is_open == False:
             self.log.error(f"Port {self.port.name} not open")
             self.log.debug(f"Serial I/O Thread not started")
             return False
-        
         self.workerIO._begin()  
         return True
         
@@ -67,8 +62,7 @@ class SerialDevice(BaseDevice):
     
     def readDevice(self):
         try: 
-            # Read ASCII Message
-            msgPacket = self.port.readline()
+            msgPacket = self.port.read_until(b'\n')
             msg = msgPacket.decode('utf-8').rstrip("\n")
             msg = msg.replace('\x00','')
             if len(msg) <= 0:
@@ -79,12 +73,11 @@ class SerialDevice(BaseDevice):
         except Exception as e :
             self.log.error(f"Exception in Serial Read: {e}")
             raise 
-
-        try:
-            #Decode Message Publish Data under Arg SubTopic
+        try: #Decode Message Publish Data under Arg SubTopic
             recvMsg = MsgFrame.extractMsg(msg)    
-            topic = self.pubMap.getTopicByID(recvMsg.ID)    
-            self.pubMsgSubTopics(topic=topic, data=recvMsg.data)
+            topic = self.pubMap.getTopicByID(recvMsg.ID)
+            if isinstance(topic, Topic):
+                self.pubMsgSubTopics(topic=topic, data=recvMsg.data)
         except UnicodeDecodeError as e:
             self.log.warning(f"{e} {msgPacket}")
             return 
@@ -93,8 +86,7 @@ class SerialDevice(BaseDevice):
             raise 
 
     def writeDevice(self):
-        #Service CmdMsg Queue And Transmit MsgFrame over Serial
-        try:
+        try: #Service CmdMsg Queue And Transmit MsgFrame over Serial
             cmdPacket = self.cmdQueue.get_nowait()
             self.port.write(cmdPacket.encode()) # output Data
         except Empty:
@@ -102,12 +94,8 @@ class SerialDevice(BaseDevice):
         except Exception as e:
             self.log.error(f"Exception in Serial Write: {e}")
             raise
-
-    """
-    ************** PUBLIC FUNCTIONS *************************
-    """    
+  
     def connect(self) -> bool:
-        '''Connect to serial device and start reading'''
         self.log.info(f"Connecting Device to: {self.info.port}, At Baud: {self.info.baudRate}")
         if self.port.is_open == True:
             self.log.error('Connect Error: Serial Port Already Open')
@@ -126,7 +114,6 @@ class SerialDevice(BaseDevice):
             return True
     
     def disconnect(self) -> bool:
-        '''Disconnect from serial device'''
         if self.port.is_open == False:
             self.log.warning("Disconnect Error: Serial Port Is Already Closed")
             return False

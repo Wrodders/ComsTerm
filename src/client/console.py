@@ -8,10 +8,11 @@ from common.messages import TopicMap
 from common.utils import TopicMenu
 
 class ConsoleApp(QFrame):
-    def __init__(self, topicMap: TopicMap):
+    def __init__(self):
         super().__init__()
+        self.log = getmylogger(__name__)
         self.maxConsoles = 4
-        self.topicMap = topicMap
+        self.topicMap = None
         self.consoles = list()
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
@@ -54,17 +55,16 @@ class ConsoleApp(QFrame):
 
     def new_console_handle(self):
          if(self.tabs.count() <= self.maxConsoles):
-            diag = ConfigConsole(self.topicMap)
-            if diag.exec() == True:
-                protocol = diag.topicMenu.saveProtocol()
-                console = Console()
-                console.config(topics=protocol, name="Console")
-                self.consoles.append(console)
-                self.tabs.addTab(console, console.name)
-
-
-
-
+            if(isinstance(self.topicMap, TopicMap)):
+                diag = ConfigConsole(self.topicMap)
+                if diag.exec() == True:
+                    protocol = diag.topicMenu.saveProtocol()
+                    console = Console()
+                    console.config(topics=protocol, name="Console")
+                    self.consoles.append(console)
+                    self.tabs.addTab(console, console.name)
+            else:
+                self.log.error("No Valid TopicMap")
 
 class Console(QWidget):
     """Widget representing a console for displaying messages."""
