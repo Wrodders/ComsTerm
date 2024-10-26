@@ -1,12 +1,7 @@
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
-
-import zmq, platform
+import zmq
 from enum import Enum
 
 from common.logger import getmylogger
-from common.worker import Worker
-
 
 """
 ZMQ SOCKET INTERFACE FUNCTIONS
@@ -20,10 +15,14 @@ class Transport(Enum):
 
 
 class Endpoint(Enum):
-    COMSTERM = "comsterm"
-    PISERVER = "raspberrypi.local:5555"
-    DBOT = "dbot.local:5555"
-    LOOPBACK = "127.0.0.1:5555"
+    COMSTERM_MSG = "comsterm_msg"
+    COMSTERM_CMD = "comsterm_cmd"
+    PI_MSG = "raspberrypi.local:5555"
+    PI_CMD = "raspberrypi.local:5556"
+    DBOT_MSG = "dbot.local:5555"
+    DBOT_CMD = "dbot.local:5556"
+    LOOPBACK_MSG = "*:5555"
+    LOOPBACK_CMD = "127.0.0.1:5556"
 
 def buildAddress(transport: Transport, endpoint: Endpoint) -> str:
     if transport == Transport.TCP:
@@ -79,6 +78,7 @@ class ZmqSub:
         self.socket = self.context.socket(zmq.SUB)
         self.topicList = []
 
+
     def connect(self):
         self.socket.connect(self.socketAddress)
         self.log.debug(f"Connected ZMQ SUB socket to: {self.socketAddress}")
@@ -88,7 +88,7 @@ class ZmqSub:
             self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
             self.topicList.append(topic)
             if(topic==""):
-                topic = "*"
+                topic = "/"
             self.log.debug(f"ZMQ SUB Subscribed to {topic}")
 
     def removeTopic(self, topic : str):
@@ -102,7 +102,7 @@ class ZmqSub:
     
     def receive(self) -> tuple[str, str]:
         try:
-            dataFrame = self.socket.recv_multipart(flags=zmq.NOBLOCK)
+            dataFrame = self.socket.recv_multipart()
             return (dataFrame[0].decode(),dataFrame[1].decode())
         except zmq.Again:
             # No message received, continue loop
@@ -116,46 +116,5 @@ class ZmqSub:
         self.log.debug(f"Closed ZMQ SUB socket connected to: {self.socketAddress}" )
 
 
-"""
-@Brief: ZMQ Subscription End Point for Qt Components
-
-"""
-class ZmqServer():
-    def __init__(self):
-        super().__init__()
-        self.log = getmylogger(__name__)
-        self.context = zmq.Context.instance()
-        self.dealer = self.context.socket(zmq.DEALER)
-     
-
-        
-
-
-class ZmqBridgeQt(QObject):
-    msgSig = pyqtSignal(tuple)
-    def __init__(self):
-        super().__init__()
-        self.log = getmylogger(__name__)
-        self.subscriber = ZmqSub(Transport.INPROC, Endpoint.COMSTERM)
-        self.workerIO = Worker(self._run)
-        
-       
-    def _run(self):
-        self.log.info(f"Started ZmqBridge I/O Thread")
-       
-        self.subscriber.connect()
-        
-        while not self.workerIO.stopEvent.is_set():
-            try:
-                topic, msg = self.subscriber.receive()
-                if((topic or msg) != ""):
-                    self.msgSig.emit((topic,msg))
-                
-            except Exception as e:
-                self.log.error(f"Exception in ZmqBridgeQt {e}")
-                break
-        
-        self.subscriber.close()
-        self.log.info("Exiting ZmqBridge I/O Thread")
                 
         

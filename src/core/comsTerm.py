@@ -3,11 +3,18 @@ from PyQt6.QtWidgets import *
 
 from common.logger import getmylogger
 
-from core.device import BaseDevice, Devices, DeviceInfo
+from core.device import BaseDevice, Devices, DeviceInfo, Endpoint, Transport
 from core.SerialDevice import SerialDevice, SerialInfo
 from core.ZmqDevice import ZmqDevice, ZmqInfo
 from core.SimulatedDevice import SimulatedDevice, SimInfo
 
+
+'''
+COMS_TERM MSG  | PUB  |--------| Read  |   
+---------------| ---- | Device | ------| 
+COMS_TERM CNTLR| SUB  |--------| Write |
+
+'''
 
 class ComsTerm():
     """ Back End handler """

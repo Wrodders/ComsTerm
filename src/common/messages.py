@@ -1,6 +1,7 @@
 
 from dataclasses import dataclass, field
 from typing import Dict, List
+import csv
 
 ''' 
 MsgFrame: Represents the raw serialized msg from a device. 
@@ -49,17 +50,24 @@ class TopicMap:
     namesToIds: Dict[str, str] = field(default_factory=dict)
     numTopics = int()
 
-    def register(self, topicName: str, topicArgs: List[str], delim : str):
+    def register(self, topicName: str, topicID:str, topicArgs: List[str], delim: str):
         """Register a new topic"""
-        topicId = chr(ord('a') + self.numTopics)
-        if delim != "":
-            numArgs = len(topicArgs)
-        else:
-            numArgs = 0
-        topic = Topic(ID=topicId, name=topicName, args=topicArgs,delim=delim, nArgs=numArgs)
+        numArgs = len(topicArgs) if delim else 0
+        topic = Topic(ID=topicID, name=topicName, args=topicArgs, delim=delim, nArgs=numArgs)
         self.numTopics += 1
-        self.topics[topicId] = topic
-        self.namesToIds[topicName] = topicId
+        self.topics[topicID] = topic
+        self.namesToIds[topicName] = topicID
+
+    def loadTopicsFromCSV(self, filename: str):
+        """Load topics from a CSV file"""
+        with open(filename, mode='r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                topicName = row['PubName']
+                topicID = chr((int(row['pubid']) + ord('a')))
+                topicArgs = [arg  for arg in row['format'].split(':')]  # Split format string into list
+                delim = row['delim']
+                self.register(topicName,topicID, topicArgs, delim)
 
     def getTopicByID(self, topic_id: str) -> Topic | None:
         """Get topic by ID"""
@@ -80,11 +88,8 @@ class TopicMap:
             return (str(), list())
         
     def getTopicNames(self) -> List[str]:
-        
         return list(set([topic.name for topic in self.topics.values()]))
     
 
     def getTopics(self) -> List[Topic]:
         return list(self.topics.values())
-    
-

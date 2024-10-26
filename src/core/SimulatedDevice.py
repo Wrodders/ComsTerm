@@ -19,57 +19,53 @@ class SimInfo(DeviceInfo):
 """
 class SimulatedDevice(BaseDevice):
     def __init__(self, deviceInfo: SimInfo):
-        super().__init__()        
+        super().__init__(pubEndpoint=deviceInfo.pubEndpoint, pubTransport=deviceInfo.pubTransport, 
+                        cmdEndpoint=deviceInfo.cmdEndpoint, cmdTransport=deviceInfo.cmdTransport)   
         self.log = getmylogger(__name__)
         # Register Device Topics
-        self.pubMap.register(topicName="LINE", topicArgs=["L", "C","R" ], delim=":")
-        self.pubMap.register(topicName="ACCEL", topicArgs=["X", "Y","Z" ], delim=":")
+        self.pubMap.register(topicName="LINE", topicID='0',topicArgs=["L", "C","R" ], delim=":")
+        self.pubMap.register(topicName="ACCEL",topicID='1', topicArgs=["X", "Y","Z" ], delim=":")
         #Simulated only parameters
         self.info = deviceInfo
+        self.lastTime = time.time()
         self.topicGenFuncMap = {
             'LINE' : self._generate_line_data,
             'ACCEL' : self._generate_accel_data,
         }
     
     def _start(self) -> bool:
-        self.workerIO._begin()
+        self.workerRead._begin()
+        self.workerWrite._begin()
         return True
     
-    def _stop(self):
-        self.workerIO._stop()
-        self.publisher.close()
-
-
+    def _cleanup(self):
+        pass
     
-    def _run(self):
-        '''Execute Thread'''
-        self.log.debug("Started Simulated Device I/O Thread")
-        self.publisher.bind()
-        self.log.info(f"Publishing: {[t for t in self.topicGenFuncMap.keys()]}")
-        while (not self.workerIO.stopEvent.is_set()):
-            try: # grab data from device 
-                topic, msg = self._generate_msg_for_topic()
-                delim , args = self.pubMap.getTopicFormat(topic)
-                msgArgs = msg.split(delim)
-                msgSubTopics = [( topic + "/" + arg) for arg in args]
-                [self.publisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+    def _readDevice(self):
+        self.log.debug("Started Simulated Device Read Thread")
+        self.msgPublisher.bind()
+        self.log.info(f"Publishing: {[t.name for t in self.pubMap.getTopics()]}")
+        while (not self.workerRead.stopEvent.is_set()):
+            try: # Send Cmd MsgPacket to Device    
+                elapsedTime= time.time() - self.lastTime; 
+               
+                if(elapsedTime >= self.info.dt):
+                    topic, msg = self._generate_msg_for_topic()
+                    delim , args = self.pubMap.getTopicFormat(topic)
+                    msgArgs = msg.split(delim)
+                    msgSubTopics = [( topic + "/" + arg) for arg in args]
+                    [self.msgPublisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                    self.lastTime=time.time()
+                    
             except Exception as e:
-                self.log.error(f"Exception in Simulated Data :{e}")
+                self.log.error(f"Exception in Simulated Read :{e}")
                 break
+        self.log.debug("Exit Simulated Interface Read Thread")
+        
 
-            try: # Send Cmd MsgPacket to Device
-                cmdPacket = self.cmdQueue.get_nowait()
-                print(cmdPacket) # test commander validation & packetazation 
-            except Empty:
-                pass
-            except Exception as e:
-                self.log.error(f"Exception in Simulated Cmd :{e}")
-                break
-
-            time.sleep(self.info.dt)  
-
-        self.log.debug("Exit Simulated Interface I/O Thread")
-        return # exit thread
+    def _writeDevice(self):
+        self.log.debug("Started Simulated Device Write Thread")
+        self.log.debug("Exit Simulated Interface Write Thread")
     
     # Private Functions
     def _generate_line_data(self) -> str:

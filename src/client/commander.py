@@ -7,6 +7,7 @@ import sys
 class Commander(QWidget):
     def __init__(self):
         super().__init__()
+        self.setMinimumHeight(200)
         vBox = QVBoxLayout()
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True) 

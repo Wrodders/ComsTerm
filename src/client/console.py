@@ -2,10 +2,10 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
-from common.zmqutils import ZmqBridgeQt
+from client.zmqQtBridge import ZmqBridgeQt
 from common.logger import getmylogger
 from common.messages import TopicMap
-from common.utils import TopicMenu
+from client.menus import TopicMenu
 
 class ConsoleApp(QFrame):
     def __init__(self):

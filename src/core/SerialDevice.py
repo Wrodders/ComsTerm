@@ -1,12 +1,25 @@
-import serial, serial.tools.list_ports, os
-from queue import Empty
+import serial, serial.tools.list_ports
 from dataclasses import dataclass
 
+import sys,os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 from common.logger import getmylogger
 from common.utils import scanUSB
 from common.messages import Topic, MsgFrame
+from common.zmqutils import Transport, Endpoint
 
 from core.device import BaseDevice, DeviceInfo, Devices
+import argparse
+
+
+'''
+|-------| TX --> UART --> RX |---------| PUB  --> INPROC --> SUB | Console | 
+|  MCU  |                    | SER Dev | 
+|-------| RX <-- UART <-- TX |---------| SUB <--  INPROC <-- PUB | Control |                     
+
+'''
+
+
 
 @dataclass
 class SerialInfo(DeviceInfo):
@@ -16,85 +29,74 @@ class SerialInfo(DeviceInfo):
 
 class SerialDevice(BaseDevice):
     def __init__(self, info: SerialInfo):
-        super().__init__()
+        super().__init__(pubEndpoint=info.pubEndpoint, pubTransport=info.pubTransport, 
+                        cmdEndpoint=info.cmdEndpoint, cmdTransport=info.cmdTransport)
         self.log = getmylogger(__name__)
         self.info = info
-
-        self.cmdMap.register(topicName="STOP", topicArgs=[], delim="")
-        self.cmdMap.register(topicName="START", topicArgs=[], delim="")
-        self.cmdMap.register(topicName="LINE", topicArgs=[], delim="")
-        self.cmdMap.register(topicName="TURN", topicArgs=[], delim="")
-        
-        self.pubMap.register(topicName="CMD_RET", topicArgs=[], delim=":")
-        self.pubMap.register(topicName="ERROR", topicArgs=[], delim=":")
-        self.pubMap.register(topicName="INFO", topicArgs=[], delim=":")
-        self.pubMap.register(topicName="DEBUG", topicArgs=[], delim=":")
-        self.pubMap.register(topicName="IMU", topicArgs=["RP", "CR", "KP","RR","CP", "KR"], delim=":")
-     
+        self.pubMap.loadTopicsFromCSV('devicePub.csv')
         self.port = serial.Serial() # Data input
         self.connect()
 
     def _start(self) -> bool:   
         if self.port.is_open == False:
             self.log.error(f"Port {self.port.name} not open")
-            self.log.debug(f"Serial I/O Thread not started")
+            self.log.debug(f"Serial I/O Threads not started")
             return False
-        self.workerIO._begin()  
+        self.workerRead._begin() 
+        self.workerWrite._begin() 
         return True
         
-    def _stop(self):
-        self.workerIO._stop()
-        self.publisher.close()
-
-    def _run(self):
-        self.log.debug("Started Serial Interface I/O Thread")
-        self.publisher.bind()
-        while (not self.workerIO.stopEvent.is_set()) and self.port.is_open:
-            try:
-                self.readDevice()
-                self.writeDevice()
-            except Exception as e:
-                self.log.error(f"Unexpected exception in thread loop: {e}")
-                break
-
-        self.log.debug('Exit Serial Interface I/O Thread')
+    def _cleanup(self):
         self.disconnect()
-    
-    def readDevice(self):
-        try: 
-            msgPacket = self.port.read_until(b'\n')
-            msg = msgPacket.decode('utf-8').rstrip("\n")
-            msg = msg.replace('\x00','')
-            if len(msg) <= 0:
-                return
-        except UnicodeDecodeError as e:
+
+
+    def _readDevice(self):
+        self.log.debug("Started Serial Interface I/O Thread")
+        self.msgPublisher.bind()
+        
+        self.log.debug(f"Publishing: {[t.name for t in self.pubMap.getTopics()]}")
+        while (not self.workerRead.stopEvent.is_set()):
+            try: # Read Message Packets Over UART (Blocking)
+                msgPacket = self.port.readline()
+                msg = msgPacket.decode('utf-8').rstrip("\n")
+                msg = msg.replace('\x00','')
+                if len(msg) <= 0:
+                    return
+            except UnicodeDecodeError as e:
                 self.log.warning(f"{e} {msgPacket}")
                 return
-        except Exception as e :
-            self.log.error(f"Exception in Serial Read: {e}")
-            raise 
-        try: #Decode Message Publish Data under Arg SubTopic
-            recvMsg = MsgFrame.extractMsg(msg)    
-            topic = self.pubMap.getTopicByID(recvMsg.ID)
-            if isinstance(topic, Topic):
-                self.pubMsgSubTopics(topic=topic, data=recvMsg.data)
-        except UnicodeDecodeError as e:
-            self.log.warning(f"{e} {msgPacket}")
-            return 
-        except Exception as e:
-            self.log.error(f"Exception in Serial Decode: {e}")
-            raise 
+            except Exception as e :
+                self.log.error(f"Exception in Serial Read: {e}")
+                raise 
+            try: #Decode Message Publish Data under Arg SubTopic
+                recvMsg = MsgFrame.extractMsg(msg)    
+                topic = self.pubMap.getTopicByID(recvMsg.ID)
+                if isinstance(topic, Topic):
+                    self.pubMsgSubTopics(topic=topic, data=recvMsg.data)
+            except UnicodeDecodeError as e:
+                self.log.warning(f"{e} {msgPacket}")
+                return 
+            except Exception as e:
+                self.log.error(f"Exception in Serial Decode: {e}")
+                raise 
 
-    def writeDevice(self):
-        try: #Service CmdMsg Queue And Transmit MsgFrame over Serial
-            cmdPacket = self.cmdQueue.get_nowait()
-            self.port.write(cmdPacket.encode()) # output Data
-        except Empty:
-            pass
-        except Exception as e:
-            self.log.error(f"Exception in Serial Write: {e}")
-            raise
-  
+        self.log.debug(f'Exit {self.info.devType.name} Read Thread')
+        
+
+    def _writeDevice(self):        
+        self.log.debug("Started Serial Interface Write Thread")
+        self.cmdSubscriber.addTopicSub(f"{self.info.name}")
+        self.cmdSubscriber.connect()
+        while (not self.workerWrite.stopEvent.is_set()):
+            try: # Grab Message from Subsriction Socket
+                if(self.port.writable):
+                    topic, message = self.cmdSubscriber.receive();
+                    if(message):
+                        self.port.write(message.encode())
+            except Exception as e:
+                self.log.error("Exception in Serial Write") 
+                raise
+        
     def connect(self) -> bool:
         self.log.info(f"Connecting Device to: {self.info.port}, At Baud: {self.info.baudRate}")
         if self.port.is_open == True:
@@ -126,3 +128,40 @@ class SerialDevice(BaseDevice):
             self.log.info('Serial Port Closed')
             return True
         
+
+
+if __name__ == "__main__":
+   
+
+    parser = argparse.ArgumentParser(description="Configure and run the serial device.")
+  
+    # SerialInfo parameters
+    parser.add_argument("--port", type=str, required=True, help="The serial port to connect to (e.g., COM3, /dev/ttyUSB0).")
+    parser.add_argument("--baudrate", type=int, default=115200, help="Baud rate for the serial connection.")
+    parser.add_argument("--pubEndpoint", type=str, choices=[e.value for e in Endpoint], default=Endpoint.COMSTERM_MSG.value, help="Publishing endpoint.")
+    parser.add_argument("--pubTransport", type=str, choices=[e.value for e in Transport], default=Transport.INPROC.value, help="Publishing transport method.")
+    parser.add_argument("--cmdEndpoint", type=str, choices=[e.value for e in Endpoint], default=Endpoint.COMSTERM_CMD.value, help="Command endpoint.")
+    parser.add_argument("--cmdTransport", type=str, choices=[e.value for e in Transport], default=Transport.INPROC.value, help="Command transport method.")
+
+    args = parser.parse_args()
+    
+    # Create SerialInfo instance using parsed arguments
+    serial_info = SerialInfo(
+        name=Devices.SERIAL.name,
+        devType=Devices.SERIAL,
+        port=args.port,
+        baudRate=args.baudrate,
+        pubEndpoint=Endpoint[args.pubEndpoint.upper()],
+        pubTransport=Transport[args.pubTransport.upper()],
+        cmdEndpoint=Endpoint[args.cmdEndpoint.upper()],
+        cmdTransport=Transport[args.cmdTransport.upper()]
+    )
+    
+    # Instantiate and start the SerialDevice
+    device = SerialDevice(info=serial_info)
+
+    try:
+        device._start()
+    except Exception as e:
+        device.log.error(f"Failed to start device: {e}")
+        device._stop()

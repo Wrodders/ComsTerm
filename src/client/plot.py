@@ -8,9 +8,9 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.animation as animation
 plt.style.use('dark_background')
 
-from common.zmqutils import ZmqBridgeQt
+from client.zmqQtBridge import ZmqBridgeQt
 from common.logger import getmylogger
-from common.utils import TopicMenu
+from client.menus import TopicMenu
 from core.device import TopicMap
 
 """     
