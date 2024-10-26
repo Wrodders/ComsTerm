@@ -37,9 +37,8 @@ class SimulatedDevice(BaseDevice):
         self.workerRead._begin()
         self.workerWrite._begin()
         return True
-    
-    def _cleanup(self):
-        pass
+    def _stop(self):
+        self.msgPublisher.close()   
     
     def _readDevice(self):
         self.log.debug("Started Simulated Device Read Thread")

@@ -45,11 +45,11 @@ class SerialDevice(BaseDevice):
         self.workerRead._begin() 
         self.workerWrite._begin() 
         return True
+    
+    def _stop(self):
+        self.msgPublisher.close()   
+
         
-    def _cleanup(self):
-        self.disconnect()
-
-
     def _readDevice(self):
         self.log.debug("Started Serial Interface I/O Thread")
         self.msgPublisher.bind()
@@ -67,7 +67,7 @@ class SerialDevice(BaseDevice):
                 return
             except Exception as e :
                 self.log.error(f"Exception in Serial Read: {e}")
-                raise 
+                return 
             try: #Decode Message Publish Data under Arg SubTopic
                 recvMsg = MsgFrame.extractMsg(msg)    
                 topic = self.pubMap.getTopicByID(recvMsg.ID)
@@ -78,9 +78,10 @@ class SerialDevice(BaseDevice):
                 return 
             except Exception as e:
                 self.log.error(f"Exception in Serial Decode: {e}")
-                raise 
+                return 
 
         self.log.debug(f'Exit {self.info.devType.name} Read Thread')
+        self.msgPublisher.close()   
         
 
     def _writeDevice(self):        

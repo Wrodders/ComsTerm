@@ -50,20 +50,15 @@ class BaseDevice():
     def _start(self) -> bool:
         raise NotImplementedError("Subclasses must implement start method")
     
-    def _stop(self):        
-        self.workerRead._stop()
-        self.msgPublisher.close()
-        self.workerWrite._stop()
-        self._cleanup()
+    def _stop(self):    
+        raise NotImplementedError("Subclasses Must Implemetn _stop")
+  
        
     def _readDevice(self):
         raise NotImplementedError("Subclass must implement _readDevice method")
     
     def _writeDevice(self):
         raise NotImplementedError("Subclass must implement _writeDevice method")
-    
-    def _cleanup(self):
-        raise NotImplementedError("Subclass must implement _cleanup method")
     
 
     def pubMsgSubTopics(self, topic: Topic, data:str):

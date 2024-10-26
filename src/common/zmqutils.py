@@ -63,8 +63,9 @@ class ZmqPub:
         self.socket.send_multipart([topic_b, data_b])
 
     def close(self):
-        self.socket.close()
-        self.log.debug(f"Closed ZMQ PUB socket binded to: {self.socketEndpoint}" )
+        if(self.socket):
+            self.socket.close()
+            self.log.debug(f"Closed ZMQ PUB socket binded to: {self.socketEndpoint}" )
 
 """
 @Brief: ZMQ Subscription socket with added functionality.

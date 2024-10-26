@@ -39,11 +39,10 @@ class ZmqDevice(BaseDevice):
     def _start(self) -> bool:
         self.workerRead._begin()
         return True
-
-    def _cleanup(self):
-        self.clientSub.close()
+    
+    def _stop(self):
         self.clientPub.close()
-  
+        self.msgPublisher.close()   
 
     def _readDevice(self):
         self.msgPublisher.bind()
