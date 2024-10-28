@@ -11,7 +11,7 @@ from core.comsTerm import ComsTerm
 
 from client.plot import CreatePlot, LinePlot, PlotApp
 from client.console import ConfigConsole, Console, ConsoleApp
-from client.commander import Commander
+from client.commander import CommanderApp
 from client.controls import CmdBtnFrame
 from client.menus import DeviceConfig
 
@@ -24,13 +24,14 @@ class GUI(QWidget):
         self.windows = list()
         # Applications
         self.comsTerm = ComsTerm()
-        self.commanderApp = Commander()
+        self.commanderApp = CommanderApp()
         self.plotApp = PlotApp()
         self.consoleApp = ConsoleApp()
         self.initUI()
     def closeEvent(self, event):
         self.plotApp.close()
         self.consoleApp.close()
+        self.commanderApp._stop()
         self.comsTerm.stopDevice()
         self.log.info("Closing GUI")
         event.accept()

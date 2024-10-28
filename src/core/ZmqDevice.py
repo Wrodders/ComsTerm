@@ -9,12 +9,9 @@ from common.logger import getmylogger
 
 
 '''
-
 |-------| PUB --> TCP MSG --> SUB |---------|  PUB --> INPROC --> SUB | Console |                   
 | SerDev|                         | ZMQ Dev | 
 |-------| SUB <--TCP CMD <--  PUB |---------|  SUB <-- INPROC <-- PUB | CONTROL | 
-
-
 '''
 
 
@@ -23,7 +20,7 @@ class ZmqInfo(DeviceInfo):
     clientSub_transport : Transport = Transport.TCP
     clientSub_endpoint : Endpoint = Endpoint.PI_MSG
     clientCmd_transport : Transport = Transport.TCP
-    clientCmd_endpoint : Endpoint = Endpoint.PI_CMD
+    clientCmd_endpoint : Endpoint = Endpoint.LOCAL_CMD
 
 class ZmqDevice(BaseDevice):
     def __init__(self, info: ZmqInfo ): 
@@ -38,6 +35,7 @@ class ZmqDevice(BaseDevice):
         
     def _start(self) -> bool:
         self.workerRead._begin()
+        self.workerWrite._begin()
         return True
     
     def _stop(self):
@@ -70,12 +68,14 @@ class ZmqDevice(BaseDevice):
         while (not self.workerRead.stopEvent.is_set()):
             try:
                 topic, data = self.cmdSubscriber.receive()
+                print(topic, data)
                 self.clientPub.send(topic=topic, data=data)
             except Exception as e:
-                    self.log.warning(f"Exception in ZmqDeviceRun:{e} ")
+                    self.log.warning(f"Exception in ZmqDeviceWRITE:{e} ")
                     pass
 
         self.log.debug("Exit ZMQ Interface Write Thread")
     
 
     
+  

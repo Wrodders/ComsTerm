@@ -29,6 +29,60 @@ class MsgFrame():
         ID = str(packet[1])
         data = packet[2:]
         return cls(ID=ID, data=data)
+    
+
+@dataclass
+class Parameter:
+    register: str = ""        # Parameter Register
+    address: str = 'a'          # Parameter Address
+    access: str = ""          # Access type (R/W)
+    data_type: str = ""       # Data Type
+    description: str = ""      # Description
+
+@dataclass
+class ParameterMap:
+    parameters: Dict[str, Parameter] = field(default_factory=dict)
+    namesToAddresses: Dict[str, str] = field(default_factory=dict)
+    numParameters: int = 0
+
+    def register(self, register: str, address: str, access: str, data_type: str, description: str):
+        """Register a new parameter."""
+        param = Parameter(register=register, address=address, access=access, data_type=data_type, description=description)
+        self.parameters[register] = param
+        self.namesToAddresses[register] = address
+        self.numParameters += 1
+
+    def loadParametersFromCSV(self, filename: str):
+        """Load parameters from a CSV file."""
+        with open(filename, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                self.register(
+                    register=row['Register'],
+                    address=row['Address'],
+                    access=row['Access'],
+                    data_type=row['Data Type'],
+                    description=row['Description']
+                )
+
+    def getParameterByAddress(self, address: int) -> Parameter | None:
+        """Get parameter by address."""
+        for param in self.parameters.values():
+            if param.address == address:
+                return param
+        return None
+
+    def getParameterByRegister(self, register: str) -> Parameter | None:
+        """Get parameter by register name."""
+        return self.parameters.get(register)
+
+    def getParameterNames(self) -> List[str]:
+        """Get a list of all parameter names."""
+        return list(self.parameters.keys())
+    
+    def getParameters(self) -> List[Parameter]:
+        """Get a list of all parameters."""
+        return list(self.parameters.values())
 
         
 """ 

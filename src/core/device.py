@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from common.logger import getmylogger
 
 from common.worker import Worker
-from common.messages import TopicMap, Topic, MsgFrame
-from common.zmqutils import ZmqPub,Transport, Endpoint, ZmqSub
+from common.messages import TopicMap, Topic, MsgFrame, Parameter, ParameterMap
+from common.zmqutils import ZmqPub, Transport, Endpoint, ZmqSub
 
 
 
@@ -42,7 +42,6 @@ class BaseDevice():
         self.msgPublisher = ZmqPub(pubTransport, pubEndpoint)
         self.cmdSubscriber = ZmqSub(cmdTransport, cmdEndpoint)
         # Create Base Topic Maps
-        self.cmdMap = TopicMap()
         self.pubMap = TopicMap()
 
 

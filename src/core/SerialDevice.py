@@ -49,7 +49,6 @@ class SerialDevice(BaseDevice):
     def _stop(self):
         self.msgPublisher.close()   
 
-        
     def _readDevice(self):
         self.log.debug("Started Serial Interface I/O Thread")
         self.msgPublisher.bind()
@@ -89,11 +88,11 @@ class SerialDevice(BaseDevice):
         self.cmdSubscriber.addTopicSub(f"{self.info.name}")
         self.cmdSubscriber.connect()
         while (not self.workerWrite.stopEvent.is_set()):
-            try: # Grab Message from Subsriction Socket
-                if(self.port.writable):
-                    topic, message = self.cmdSubscriber.receive();
-                    if(message):
-                        self.port.write(message.encode())
+            try: # Grab Message from Subscription Socket
+                topic, message = self.cmdSubscriber.receive();
+                if(message and self.port.writable()):
+                    print("write", message)
+                    self.port.write(message.encode())
             except Exception as e:
                 self.log.error("Exception in Serial Write") 
                 raise

@@ -1,16 +1,16 @@
-Register, Address, Access, Data Type, Description
-IDENT,0,R,str, Device Id
-RESET,1,W,bool,Reset Device
-STATE,2,W,str, Device State
-TLV,3,W,float,Target Linear Vel
-TAV,4,W,float,Target Angular Vel
-BO,5,W,float,Balance Offset
-TB,6,W,float,Target Balance Angle
-WP,7,W,float,Wheel Speed KP
-WI,8,W,float,Wheel Speed KI
-BP,9,W,float,Balance KP
-BI,10,W,float,Balance KI
-BD,11,W,float,Balance KD
-VP,12,W,float,Velocity KP
-VI,13,W,float,Velocity KI
-VD,14,W,float,Velcoity KD
+Register,Address,Access,Data Type,Description
+IDENT,a,R,str, Device Id
+RESET,b,W,bool,Reset Device
+STATE,c,W,str, Device State
+TLV,d,W,float,Target Linear Vel
+TAV,e,W,float,Target Angular Vel
+BO,f,W,float,Balance Offset
+TB,g,W,float,Target Balance Angle
+WP,h,W,float,Wheel Speed KP
+WI,i,W,float,Wheel Speed KI
+BP,j,W,float,Balance KP
+BI,k,W,float,Balance KI
+BD,l,W,float,Balance KD
+VP,m,W,float,Velocity KP
+VI,n,W,float,Velocity KI
+VD,o,W,float,Velcoity KD
