@@ -75,10 +75,11 @@ class GUI(QWidget):
             else:
                 self.comsTerm.newDevice(diag.getValues())
                 if(isinstance(self.comsTerm.device, BaseDevice)):
-                    self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.devType.value}: Connected")
                     self.plotApp.topicMap = self.comsTerm.device.pubMap
                     self.consoleApp.topicMap = self.comsTerm.device.pubMap
+                    self.dev_lbl.setText(f"Device : {self.comsTerm.device.info.name}")
         else: 
+            """ TODO: THIS Closes sockets on quit """
             self.comsTerm.stopDevice()
             self.dev_lbl.setText("Device : None")
 

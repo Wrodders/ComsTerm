@@ -138,10 +138,10 @@ if __name__ == "__main__":
     # SerialInfo parameters
     parser.add_argument("--port", type=str, required=True, help="The serial port to connect to (e.g., COM3, /dev/ttyUSB0).")
     parser.add_argument("--baudrate", type=int, default=115200, help="Baud rate for the serial connection.")
-    parser.add_argument("--pubEndpoint", type=str, choices=[e.value for e in Endpoint], default=Endpoint.COMSTERM_MSG.value, help="Publishing endpoint.")
-    parser.add_argument("--pubTransport", type=str, choices=[e.value for e in Transport], default=Transport.INPROC.value, help="Publishing transport method.")
-    parser.add_argument("--cmdEndpoint", type=str, choices=[e.value for e in Endpoint], default=Endpoint.COMSTERM_CMD.value, help="Command endpoint.")
-    parser.add_argument("--cmdTransport", type=str, choices=[e.value for e in Transport], default=Transport.INPROC.value, help="Command transport method.")
+    parser.add_argument("--pubEndpoint", type=str, choices=[e.name for e in Endpoint], default=Endpoint.COMSTERM_MSG.value, help="Publishing endpoint.")
+    parser.add_argument("--pubTransport", type=str, choices=[e.name for e in Transport], default=Transport.INPROC.value, help="Publishing transport method.")
+    parser.add_argument("--cmdEndpoint", type=str, choices=[e.name for e in Endpoint], default=Endpoint.COMSTERM_CMD.value, help="Command endpoint.")
+    parser.add_argument("--cmdTransport", type=str, choices=[e.name for e in Transport], default=Transport.INPROC.value, help="Command transport method.")
 
     args = parser.parse_args()
     
@@ -161,7 +161,10 @@ if __name__ == "__main__":
     device = SerialDevice(info=serial_info)
 
     try:
-        device._start()
+        device.workerWrite._begin();
+        device._readDevice()
+    except KeyboardInterrupt:
+        device._stop()
     except Exception as e:
         device.log.error(f"Failed to start device: {e}")
         device._stop()

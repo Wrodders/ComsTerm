@@ -122,12 +122,12 @@ class DeviceConfig(QDialog):
 
         elif self.conDeviceCB.currentText() == Devices.SIMULATED.name:
             rate = self.simConfig.rateCB.currentText()
-            devInfo = SimInfo(dt=1/float(rate))
+            devInfo = SimInfo(name=Devices.SIMULATED.name, dt=1/float(rate))
        
         elif self.conDeviceCB.currentText() == Devices.ZMQ.name:
             cTP = self.zmqConfig.clientSide_transportCB.currentText()
             cEP = self.zmqConfig.clientSide_endpointCB.currentText()
-            devInfo = ZmqInfo(clientSub_endpoint= Endpoint(cEP), clientSub_transport=Transport(cTP))
+            devInfo = ZmqInfo(name=Devices.ZMQ.name, clientSub_endpoint= Endpoint(cEP), clientSub_transport=Transport(cTP))
 
             
         return devInfo
