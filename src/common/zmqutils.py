@@ -20,6 +20,8 @@ class Endpoint(Enum):
     PI_CMD = "raspberrypi.local:5556"
     PC_MSG = "Rodrigos-MacBook-Air.local:5555"
     PC_CMD = "Rodrigos-MacBook-Air.local:5556"
+    BB_MSG = "buildbox.local:5555"
+    BB_CMD = "buildbox.local:5556"
     DBOT_MSG = "dbot.local:5555"
     DBOT_CMD = "dbot.local:5556"
     LOCAL_MSG= "*:5555"
