@@ -5,10 +5,8 @@ MODE,c,W,str, Device State
 WT,d,W,float,Target Wheel RPM
 WP,e,W,float,Wheel Speed KP
 WI,f,W,float,Wheel Speed KI
-BP,g,W,float,Balance KP
-BI,h,W,float,Balance KI
-BD,i,W,float,Balance KD
-MT,j,W,float,Target LinVel
-MP,k,W,float,Velocity KP
-MI,l,W,float,Velocity KI
-MD,i,W,float,Velocity KI
+BT,g,W,float,Balance Trgt
+BP,h,W,float,Balance KP
+BI,i,W,float,Balance KI
+BD,j,W,float,Balance KD
+AT,k,W,float,Angvel Offset

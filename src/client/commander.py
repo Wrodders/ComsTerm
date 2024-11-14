@@ -48,19 +48,19 @@ class Commander():
         
         if(paramId):
             paramId = paramId.address
-            # SOF | ID | TYPE | DATA(0)| EOF
-            packet = ("<" + paramId +"a").encode() + b'\n'
+            # SOF | TYPE | ID | DATA(0)| EOF
+            packet = ("<" + "a" + paramId).encode() + b'\n'
             self.publisher.socket.send_multipart([b"SERIAL", packet])
 
 
     def sendSetCmd(self, paramName:str, value:str):
-                    # SOF | ID | TYPE | DATA(0)| EOF
+                    # SOF | TYPE | ID | DATA(0)| EOF
         paramId = self.paramRegMap.getParameterByRegister(paramName)
         
         if(paramId):
             paramId = paramId.address
             # SOF | ID | TYPE | DATA(0)| EOF
-            packet = ("<" + paramId + "b" + str(value)).encode() + b'\n'
+            packet = ("<" + "b" + paramId + str(value)).encode() + b'\n'
             self.publisher.socket.send_multipart([b"SERIAL", packet])
 
             
