@@ -31,7 +31,6 @@ class ConsoleApp(QFrame):
         grid.addWidget(self.settings_PB, 4, 0, 1,1)
         grid.addWidget(self.clear_PB, 4,1, 1,1)
         grid.addWidget(self.new_console_PB, 4,2,1,1)
-        self.setMinimumSize(100,350)
 
     def close(self):
         for console in self.consoles:

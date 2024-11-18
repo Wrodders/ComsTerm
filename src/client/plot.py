@@ -144,7 +144,7 @@ class LinePlot(BasePlot):
         layout.addWidget(self.canvas, 0, 0, 5, 5)
         self.setLayout(layout)
         self.setContentsMargins(0, 0, 0, 0)
-        self.setMinimumSize(600,300)
+      
       
 
     @QtCore.pyqtSlot(tuple)
