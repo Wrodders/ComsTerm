@@ -11,8 +11,7 @@ from core.comsTerm import ComsTerm
 
 from client.plot import CreatePlot, LinePlot, PlotApp
 from client.console import ConfigConsole, Console, ConsoleApp
-from client.commander import CommanderApp
-from client.controls import CmdBtnFrame
+from client.controller import ControlsApp
 from client.menus import DeviceConfig
 
 
@@ -24,7 +23,7 @@ class GUI(QWidget):
         self.windows = list()
         # Applications
         self.comsTerm = ComsTerm()
-        self.commanderApp = CommanderApp()
+        self.commanderApp = ControlsApp()
         self.plotApp = PlotApp()
         self.consoleApp = ConsoleApp()
         self.initUI()

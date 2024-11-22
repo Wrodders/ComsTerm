@@ -1,18 +1,7 @@
 from math import hypot
-
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import *
-import sys
-
-
-
-from math import hypot
-
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import *
-import sys
 
 class JoystickButton(QPushButton):
     sigStateChanged = pyqtSignal(float, float)  # x, y
@@ -27,15 +16,8 @@ class JoystickButton(QPushButton):
         self.setState(0, 0)
         self.setFixedWidth(2 * self.radius)
         self.setFixedHeight(2 * self.radius)
-
-
         # Last position before updating
         self.last_position = QPoint(0, 0)
-
-        # Counter to track number of state changes before emitting
-      
-     
-
         # Make the button circular by setting the mask
         self.setCircularMask()
 
