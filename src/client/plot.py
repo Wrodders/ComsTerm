@@ -28,11 +28,6 @@ Plot:   Subscribes to topics publishing data over ZMQ.
         Config -> Values for plot settings
 """
 
-class PlotTypes(Enum):
-    LINE = "line"
-    SCATTER = "scatter"
-    BAR = "bar"
-
 @dataclass
 class LinePlotCfg():
     yrange: tuple[float, float] = (-100, 100)
@@ -48,21 +43,62 @@ class BarPlotCfg():
     ylim: int = 100
     barWidth: float = 0.35
 
+PlotTypeMap = {
+            "LINE": LinePlotCfg,
+            "SCATTER": ScatterPlotCfg,
+            "BAR": BarPlotCfg
+        }
+
 @dataclass
 class PlotCfg():
     protocol: tuple[str, ...] = field(default_factory=tuple)
-    plotType: PlotTypes = PlotTypes.LINE
+    plotType: str = "LINE"
     plotName: str = "Plot 0"
-    plotCfg: Union[LinePlotCfg, ScatterPlotCfg, BarPlotCfg] = field(default_factory=LinePlotCfg)
+    typeCfg: Union[LinePlotCfg, ScatterPlotCfg, BarPlotCfg] = field(default_factory=LinePlotCfg)
     maxPlotSeries: int = 8
-    sample_buffer_len: int = 100
+    sampleBufferLen: int = 100
+
 
 @dataclass
 class PlotAppCfg():
     #  list of plot configurations default to a single plot
-    plotConfigs : List[PlotCfg] = field(default_factory=lambda: [PlotCfg()])
-    cnfgFilePath: str = ".config/cfg_plotApps.json"
+    plotConfigs : List[PlotCfg] = field(default_factory=list)
+    cfgFilePath: str = "config/cfg_plotApps.json"
 
+    def save(self):
+        def serialize(obj):
+            if isinstance(obj, Enum):
+                return obj.value
+            return obj
+        with open(self.cfgFilePath, "w") as file:
+            json.dump(asdict(self), file, default=serialize, indent=4)
+    def load(self):
+        # Load the configuration from the JSON file
+        with open(self.cfgFilePath, "r") as file:
+            data = json.load(file)  # Parse the JSON into a Python dictionary
+        
+        plot_configs = []
+        for config in data.get("plotConfigs", []):
+            plot_type = config["plotType"]
+            plotCfgClass = PlotTypeMap[plot_type]  # Get the appropriate class based on plotType
+            plotCfgInstance = plotCfgClass(**config["typeCfg"])  # Create an instance of the class with the config data
+            
+            pltCfg = PlotCfg(
+                protocol=config["protocol"],
+                plotType=plot_type,
+                plotName=config["plotName"],
+                maxPlotSeries=config["maxPlotSeries"],
+                sampleBufferLen=config["sampleBufferLen"],
+                typeCfg=plotCfgInstance
+            )
+            
+            plot_configs.append(pltCfg)  # Append to plot_configs
+
+        # Return the fully populated PlotAppCfg
+        return PlotAppCfg(
+            plotConfigs=plot_configs,
+            cfgFilePath=data.get("cfgFilePath", self.cfgFilePath)  # Default to the current path if not provided
+        )
 
 # Main Application Class
 class PlotApp(QFrame):
@@ -70,16 +106,17 @@ class PlotApp(QFrame):
         super().__init__()
         self.log = getmylogger(__name__)
         self.maxPlots = 4
-        self.settings = None
         self.topicMap = TopicMap()
         self.topicMap.loadTopicsFromCSV('devicePub.csv')
         self.plots = list()
         configDiag = PlotAppSettingsDialog(self.topicMap)
         if(configDiag.exec() == True):
-            self.settings = configDiag.config
+            self.config = configDiag.config
     def initUI(self):
         self.grid = QGridLayout()
         self.setLayout(self.grid)
+
+
 
     def close(self):
         for plot in self.plots:
@@ -164,7 +201,6 @@ class LinePlot(BasePlot):
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[tuple, str]):
        # Grabs msg data from the worker thread
-     
         topic, data = msg
         print(topic,data)
         try:
@@ -182,17 +218,22 @@ class LinePlot(BasePlot):
 
 
 # Settings Menus
-
 class PlotAppSettingsDialog(QDialog):
     def __init__(self, topicMap: TopicMap):
         super().__init__()
         self.setWindowTitle("Plot Settings")
         self.topicMap = topicMap
-        self.config = PlotAppCfg() # default config settings
+        # if the config file exists load the settings from the file 
+        if os.path.exists("config/cfg_plotApps.json"):
+            config = PlotAppCfg()
+            self.config = config.load()
+        else:
+            self.config = PlotAppCfg() # otherwise, use default settings
+            self.config.plotConfigs.append(PlotCfg())
         self.initUI()
         
     def initUI(self):
-        self.cfgFile = QLineEdit(self.config.cnfgFilePath)
+        self.cfgFile = QLineEdit(self.config.cfgFilePath)
         self.load_PB = QPushButton("Load Config")
         self.load_PB.clicked.connect(self.load_handle)
         self.save_PB = QPushButton("Save Config")
@@ -200,13 +241,17 @@ class PlotAppSettingsDialog(QDialog):
         self.plotList = QListWidget()
         # Create a stack layout for the plot configurations
         self.plotConfigStack = QStackedLayout()
-        self.addPlot_handle() # Add A Default Plot to Initialize UI
+                    
+        for idx in range(len(self.config.plotConfigs)):
+            self.createPlotCfg(self.config.plotConfigs[idx]) 
+            
+
         # Auto switch plot config based on currently selected plot
         self.plotList.currentRowChanged.connect(self.plotConfigStack.setCurrentIndex)
         self.addPlot_PB = QPushButton("+")
-        self.addPlot_PB.clicked.connect(self.addPlot_handle)
+        self.addPlot_PB.clicked.connect(lambda: self.addPlot_handle(PlotCfg()))
         self.removePlot_PB = QPushButton("-")
-        self.removePlot_PB.clicked.connect(self.removePlot_handle)
+        self.removePlot_PB.clicked.connect(lambda: self.removePlot_handle(self.plotList.currentRow()))
         # Dialog buttons
         QBtn = (
             QDialogButtonBox.StandardButton.Ok
@@ -244,37 +289,57 @@ class PlotAppSettingsDialog(QDialog):
         vBox.addWidget(self.buttonBox)
         self.setLayout(vBox)
 
-    def addPlot_handle(self):
+    def addPlot_handle(self, plotCfg: PlotCfg):
        # Add a new plot confirufration to the stacked layout
-        plotCfg = PlotSettings()
-        plotCfg.plotName.setText(f"Plot {len(self.config.plotConfigs)}")
-        self.config.plotConfigs.append(PlotCfg())
-        self.plotList.addItem(plotCfg.plotName.text())
+        self.config.plotConfigs.append(plotCfg)
+        self.createPlotCfg(plotCfg)
+        
+
+    def createPlotCfg(self, plotCfg: PlotCfg):
+        new_plotSettings = PlotSettings(plotCfg)
+        self.plotList.addItem(new_plotSettings.plotName.text())
         self.plotList.setCurrentRow(self.plotList.count()-1)
         
-        plotCfg.plotName.textChanged.connect(lambda: self.plotList.currentItem().setText(plotCfg.plotName.text()))
-        self.plotConfigStack.addWidget(plotCfg)
+        new_plotSettings.plotName.textChanged.connect(lambda: self.plotList.currentItem().setText(new_plotSettings.plotName.text()))
+        self.plotConfigStack.addWidget(new_plotSettings)
         self.plotConfigStack.setCurrentIndex(self.plotList.count()-1) # Auto switch to new plot config
-        
-    def removePlot_handle(self):
+
+
+    def removePlot_handle(self, index):
         # Remove the selected plot configuration from the stacked layout
-        index = self.plotList.currentRow()
         self.plotConfigStack.removeWidget(self.plotConfigStack.widget(index))
         self.config.plotConfigs.pop(index)
         self.plotList.takeItem(index)
 
+    def load_handle(self):
+        # load config from file 
+        fileDialog = QFileDialog()
+        fileDialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        fileDialog.setNameFilter("JSON Files (*.json)")
+        if fileDialog.exec():
+            self.config.cfgFilePath = fileDialog.selectedFiles()[0] # get the file path into config
+            self.cfgFile.setText(self.config.cfgFilePath) # update the text box with the file path
+    
+            for idx in range(self.plotList.count()):
+                self.removePlot_handle(idx)
+            
+            self.config = self.config.load()
+           
+            for idx in range(len(self.config.plotConfigs)):
+                self.createPlotCfg(self.config.plotConfigs[idx])
+
+
     def save_handle(self):
+        self.updateConfig()
+        self.config.save()
+
+    def updateConfig(self):
         # update settings with current plot configurations
+        self.config.cfgFilePath = self.cfgFile.text()
         for i in range(self.plotList.count()):
             self.plotConfigStack.widget(i).updateConfig()
             self.config.plotConfigs[i] = self.plotConfigStack.widget(i).config
-
-        with open(self.cfgFile.text(), "w") as f:
-            # Save settings to file
-            pass
-           
-    def load_handle(self):
-        pass
+        
 
 class DataSeriesTableSettings(QFrame):
     def __init__(self, pubMap):
@@ -308,26 +373,26 @@ class DataSeriesTableSettings(QFrame):
         return (self.topicCB.currentText(), self.argCb.currentText())
 
 class PlotSettings(QFrame):
-    def __init__(self):
+    def __init__(self, plotCfg: PlotCfg):
         super().__init__()
         self.log = getmylogger(__name__)
-        self.config = PlotCfg() # default settings
+        self.config = plotCfg
         self.initUI()
     def initUI(self):
         self.plotName = QLineEdit(self.config.plotName)
         self.plotType = QComboBox()
-        self.plotType.addItems(PlotTypes._member_names_)
-        if(self.config.plotType in PlotTypes):
-            self.plotType.setCurrentText(self.config.plotType.name)
+        self.plotType.addItems(PlotTypeMap.keys())
+        if(self.config.plotType in PlotTypeMap.keys()):
+            self.plotType.setCurrentText(self.config.plotType)
         self.maxSeries = QLineEdit(str(self.config.maxPlotSeries))
         self.maxSeries.setMaximumWidth(50)
-        self.sampleBuffer = QLineEdit(str(self.config.sample_buffer_len))
+        self.sampleBuffer = QLineEdit(str(self.config.sampleBufferLen))
         self.sampleBuffer.setMaximumWidth(50)
 
-        # Config depending on plot type
-        self.linePlotSettings = LinePlotSettings()
-        self.scatterPlotSettings = ScatterPlotSettings()
-        self.barPlotSettings = BarPlotSettings()        
+        # Config depending on plot type with default values
+        self.linePlotSettings = LinePlotSettings(LinePlotCfg())
+        self.scatterPlotSettings = ScatterPlotSettings(ScatterPlotCfg())
+        self.barPlotSettings = BarPlotSettings(BarPlotCfg())        
         self.plotCfgStack = QStackedLayout()
         self.plotCfgStack.addWidget(self.linePlotSettings)
         self.plotCfgStack.addWidget(self.scatterPlotSettings)
@@ -339,6 +404,9 @@ class PlotSettings(QFrame):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Topic Name", "Arg"])
+        self.table.setRowCount(len(self.config.protocol))
+        self.loadProtocol(self.config.protocol) # Load protocol into the table
+        
         # Layout
         grid = QGridLayout()
         grid.addWidget(QLabel("Plot Name"), 0, 0)
@@ -367,6 +435,13 @@ class PlotSettings(QFrame):
         )
         return protocol
     
+    def loadProtocol(self, protocol: tuple[str, ...]):
+        # Load protocol into the table
+        for row, series in enumerate(protocol):
+            topic, arg = series.split("/")
+            self.table.setItem(row, 0, QTableWidgetItem(topic))
+            self.table.setItem(row, 1, QTableWidgetItem(arg))
+    
     def addSeries(self, series: tuple[str, str]):
         # Add selected data series to the table
         topicName, argName = series
@@ -382,21 +457,20 @@ class PlotSettings(QFrame):
         row = self.table.currentRow()
         self.table.removeRow(row)
         
-
     def updateConfig(self):
         self.config.plotName = self.plotName.text()
-        self.config.plotType = PlotTypes[self.plotType.currentText()]
+        self.config.plotType = self.plotType.currentText()
         self.config.maxPlotSeries = int(self.maxSeries.text())
-        self.config.sample_buffer_len = int(self.sampleBuffer.text())
+        self.config.sampleBufferLen = int(self.sampleBuffer.text())
         self.config.protocol = self.saveProtocol()
         # Kinda Hacky; inheritance -> unnecessary complexity
         self.plotCfgStack.currentWidget().updateConfig() 
-        self.config.plotCfg = self.plotCfgStack.currentWidget().config
+        self.config.typeCfg = self.plotCfgStack.currentWidget().config
 
 class LinePlotSettings(QFrame):
-    def __init__(self):
+    def __init__(self, config: LinePlotCfg):
         super().__init__()
-        self.config = LinePlotCfg()
+        self.config = config
         self.initUI()
     def initUI(self):
         self.yMin = QLineEdit(str(self.config.yrange[0]))
@@ -414,9 +488,9 @@ class LinePlotSettings(QFrame):
         self.config.yrange = (float(self.yMin.text()), float(self.yMax.text()))
 
 class ScatterPlotSettings(QFrame):
-    def __init__(self):
+    def __init__(self, config: ScatterPlotCfg):
         super().__init__()
-        self.config = ScatterPlotCfg()
+        self.config = config
         self.initUI()
     def initUI(self):
         self.yMin = QLineEdit(str(self.config.yrange[0]))
@@ -448,9 +522,9 @@ class ScatterPlotSettings(QFrame):
         self.config.marker = self.marker.currentText()
 
 class BarPlotSettings(QFrame):
-    def __init__(self):
+    def __init__(self, config: BarPlotCfg):
         super().__init__()
-        self.config = BarPlotCfg()
+        self.config = config
         self.initUI()
     def initUI(self):
         self.ylim = QLineEdit(str(self.config.ylim))

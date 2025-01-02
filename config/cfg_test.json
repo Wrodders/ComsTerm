@@ -1,0 +1,52 @@
+{
+    "plotConfigs": [
+        {
+            "protocol": [],
+            "plotType": "LINE",
+            "plotName": "Test1",
+            "typeCfg": {
+                "yrange": [
+                    -100.0,
+                    100.0
+                ]
+            },
+            "maxPlotSeries": 8,
+            "sampleBufferLen": 100
+        },
+        {
+            "protocol": [
+                "INFO/"
+            ],
+            "plotType": "SCATTER",
+            "plotName": "Test2",
+            "typeCfg": {
+                "yrange": [
+                    -100.0,
+                    100.0
+                ],
+                "xrange": [
+                    -100.0,
+                    100.0
+                ],
+                "marker": "o"
+            },
+            "maxPlotSeries": 8,
+            "sampleBufferLen": 100
+        },
+        {
+            "protocol": [
+                "ERROR/",
+                "CMD_RET/"
+            ],
+            "plotType": "BAR",
+            "plotName": "Test3",
+            "typeCfg": {
+                "ylim": 100,
+                "barWidth": 0.35
+            },
+            "maxPlotSeries": 8,
+            "sampleBufferLen": 100
+        }
+    ],
+    "cfgFilePath": "/Users/rodrigoscott/Dev/ComsTerm/config/cfg_test.json"
+}

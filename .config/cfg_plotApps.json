@@ -1,9 +1,0 @@
-{
-    "plotConfigs": [
-        {
-            "protocol": [
-                "IMURAW/AX",
-                "IMURAW/AY",
-                "IMURAW/AZ"
-            ],
-            "plotType": 

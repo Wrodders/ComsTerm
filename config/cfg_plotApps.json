@@ -1,0 +1,18 @@
+{
+    "plotConfigs": [
+        {
+            "protocol": [],
+            "plotType": "LINE",
+            "plotName": "Plot Test",
+            "typeCfg": {
+                "yrange": [
+                    -100.0,
+                    100.0
+                ]
+            },
+            "maxPlotSeries": 8,
+            "sampleBufferLen": 100
+        }
+    ],
+    "cfgFilePath": "config/cfg_plotApps.json"
+}
