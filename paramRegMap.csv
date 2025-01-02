@@ -1,0 +1,23 @@
+Register,Address,Access,Data Type,Description
+IDENT,a,R,str, Device Id
+MD,b,W,float,Mode
+LT,c,W,float,Target Left  Wheel RPM
+LP,d,W,float,Left Wheel Speed KP
+LI,e,W,float,Left Wheel Speed KI
+RT,f,W,float,Target Right Wheel RPM
+RP,g,W,float,Right Wheel Speed KP
+RI,h,W,float,Right Wheel Speed KI
+BT,i,W,float,Balance Trgt
+BP,j,W,float,Balance KP
+BI,k,W,float,Balance KI
+BD,l,W,float,Balance KD
+VT,m,W,float,Target LinVel mps
+VP,n,W,float,LinVel KP
+VI,o,W,float,LinVel KI
+VD,p,W,float,LinVel KD
+VA,q,W,float,LinVel Alpha
+AT,r,W,float,Steer T
+AP,s,W,float,Steer KP
+AI,t,W,float,Steer KI
+AD,u,W,float,Steer KD
+AA,v,W,float,Steer Alpha
