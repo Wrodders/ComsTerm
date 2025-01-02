@@ -13,21 +13,16 @@ from common.zmqutils import Transport, Endpoint
 
 
 
-class TopicMenu(QFrame):
+
+class DataSeriesTable(QFrame):
     def __init__(self, pubMap):
         super().__init__()
-
         self.maxDataSeries = 8
         self.pubMap = pubMap
         self.grid = QGridLayout()
 
         self.addSeriesBtn = QPushButton("Add Series")
         self.addSeriesBtn.clicked.connect(self.addSeries)
-        self.yMin = QLineEdit("Min")
-        self.yMin.setMaximumWidth(50)
-        self.yMax = QLineEdit("Max")
-        self.yMax.setMaximumWidth(50)
-
         self.removeSeriesBtn = QPushButton("Remove Series")
 
         self.topicCB = QComboBox()
@@ -40,12 +35,13 @@ class TopicMenu(QFrame):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setHorizontalHeaderLabels(["Topic Name", "Arg"])
-        self.grid.addWidget(self.topicCB, 0, 0, 1, 1)
-        self.grid.addWidget(self.argCb, 0, 1, 1, 1)
-        self.grid.addWidget(self.addSeriesBtn, 0, 2, 1, 1)
-        self.grid.addWidget(self.yMin, 0, 3, 1, 1)
-        self.grid.addWidget(self.yMax, 0, 4, 1, 1)
-        self.grid.addWidget(self.table, 1, 0, 3, 5)
+
+        self.grid.addWidget(QLabel("Topic Name:"), 0, 0)
+        self.grid.addWidget(self.topicCB, 0, 1)
+        self.grid.addWidget(QLabel("Argument:"), 1, 0)
+        self.grid.addWidget(self.argCb, 1, 1)
+        self.grid.addWidget(self.addSeriesBtn, 2, 0, 1, 2)
+        self.grid.addWidget(self.table, 3, 0, 1, 2)
         self.setLayout(self.grid)
 
 
@@ -55,6 +51,15 @@ class TopicMenu(QFrame):
         _, topicArgs = self.pubMap.getTopicFormat(topicName)
         self.argCb.clear()
         self.argCb.addItems(topicArgs)
+
+    def loadProtocol(self, protocol: tuple[str, ...]):
+        """Load protocol data into the table."""
+        self.table.setRowCount(0) # Clear the table
+        for row, series in enumerate(protocol):
+            topicName, argName = series.split("/")
+            self.table.insertRow(row)
+            self.table.setItem(row, 0, QTableWidgetItem(topicName))
+            self.table.setItem(row, 1, QTableWidgetItem(argName))
 
     def addSeries(self):
         """Add selected data series to the table."""
@@ -234,10 +239,18 @@ class ZMQConfig(QFrame):
         self.setFrameShape(self.Shape.StyledPanel)
         self.setFrameShadow(self.Shadow.Plain)
         layout = QVBoxLayout()
+        self.serverSide_transportCB = QComboBox()
+        self.serverSide_transportCB.addItems([t.value for t in Transport])
+        self.serverSide_endpointCB = QComboBox()
+        self.serverSide_endpointCB.addItems([e.value for e in Endpoint])
+        
         self.clientSide_transportCB = QComboBox()
         self.clientSide_transportCB.addItems([transport.value for transport in Transport])
         self.clientSide_endpointCB = QComboBox()
         self.clientSide_endpointCB.addItems([endpoint.value for endpoint in Endpoint])
+        layout.addWidget(QLabel("Server Side Connection"))
+        layout.addWidget(self.serverSide_transportCB)
+        layout.addWidget(self.serverSide_endpointCB)
         layout.addWidget(QLabel("Client Side Connection"))
         layout.addWidget(self.clientSide_transportCB)
         layout.addWidget(self.clientSide_endpointCB)

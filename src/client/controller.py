@@ -14,6 +14,8 @@ from multiprocessing import Process, Pipe
 
 from core.ps4Joy import ps4_joystick_handler
 
+import csv, time
+
 class ControlsApp(QFrame):
     def __init__(self):
         super().__init__()
@@ -21,6 +23,7 @@ class ControlsApp(QFrame):
         self.cmdr = Commander()
         self.paramUI = ParamUI(paramMap=self.cmdr.paramRegMap)
         self.controller = Controller(paramMap=self.cmdr.paramRegMap)
+        self.fileCmdr = FileCmd(paramMap=self.cmdr.paramRegMap)
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(False)
         self.tabs.addTab(self.paramUI, "Params")
@@ -114,10 +117,11 @@ class Controller(QFrame):
             self.ps4_pipe_parent.send("STOP")  
             self.ps4_process.join(timeout=1)  # Wait for graceful exit
 
-        if self.ps4_process.is_alive():  
-            print("Forcing PS4 process termination...")
-            self.ps4_process.terminate()  # Force terminate
-            self.ps4_process.join()  # Ensure complete termination
+        if self.ps4_process:
+            if self.ps4_process.is_alive():  
+                print("Forcing PS4 process termination...")
+                self.ps4_process.terminate()  # Force terminate
+                self.ps4_process.join()  # Ensure complete termination
 
         self.ps4_process = None
         self.ps4_pipe_parent = None
@@ -195,3 +199,53 @@ class ParamReg(QFrame):
 
     def get_handle(self):
         pass
+
+
+class FileCmd(QFrame):
+    def __init__(self, paramMap : ParameterMap):
+        super().__init__
+        self.paramCombo = QComboBox()
+        self.paramCombo.addItems([name for name in paramMap.getParameterNames()])
+        self.csv_file = str
+        self.fileSearch = QPushButton("Open File")
+        self.file_lable = QLabel()
+
+        self.time_data = []
+        self.signal_data = []
+    def _openFile_diag(self):
+        filename , _ = QFileDialog.getOpenFileName(self, "Select csv file", "")
+        if filename: 
+            self.file_lable.setText(f"Selected File: {filename}")
+            self._load_data(filename)
+
+    def _load_data(self,csv_file: str ):
+        """Reads the signal data from the CSV file."""
+        try:
+            with open(csv_file, mode='r') as file:
+                reader = csv.reader(file)
+                next(reader)  # Skip the header row
+                for row in reader:
+                    self.time_data.append(float(row[0]))  # Time in seconds
+                    self.signal_data.append(float(row[1]))  # Signal value
+            print(f"Loaded {len(self.time_data)} data points from {self.csv_file}.")
+        except Exception as e:
+            print(f"Error reading the CSV file: {e}")
+            exit(1)
+
+    def publish_data(self):
+        """Publishes the signal data every `sample_period` seconds."""
+        start_time = time.time()
+        for t, signal in zip(self.time_data, self.signal_data):
+            # Wait until the correct time to send the next sample
+            elapsed_time = time.time() - start_time
+            time_to_wait = max(0, t - elapsed_time)
+            time.sleep(time_to_wait)
+            
+            # Instead of ZeroMQ, just print the data
+            print(f"Time: {t:.3f}s, Signal: {signal:.3f}")
+            
+            # Wait for the next sample
+            time.sleep(self.sample_period)  # Ensure 100ms interval between prints
+
+
+

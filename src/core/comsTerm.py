@@ -42,3 +42,6 @@ class ComsTerm():
         if(isinstance(self.device, BaseDevice)):
               self.device._stop()
               self.device = None
+
+
+

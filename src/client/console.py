@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from client.zmqQtBridge import ZmqBridgeQt
 from common.logger import getmylogger
 from common.messages import TopicMap
-from client.menus import TopicMenu
+from client.menus import DataSeriesTable
 
 class ConsoleApp(QFrame):
     def __init__(self):
@@ -132,7 +132,7 @@ class ConfigConsole(QDialog):
 
         self.setWindowTitle("New Console")
 
-        self.topicMenu= TopicMenu(topicMap)
+        self.topicMenu= DataSeriesTable(topicMap)
     
         QBtn = (
             QDialogButtonBox.StandardButton.Ok
