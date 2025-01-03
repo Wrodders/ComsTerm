@@ -8,10 +8,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../s
 from common.logger import getmylogger
 
 class Transport(Enum):
-    INPROC = "inproc"
-    IPC = "ipc"
-    TCP = "tcp"
-    UDP = "udp"
+    INPROC = "://"
+    IPC = ":///tmp/"
+    TCP = "://"
+    UDP = "://"
 
 class Endpoint(Enum):
     COMSTERM_MSG = "comsterm_msg"
@@ -27,15 +27,10 @@ class Endpoint(Enum):
     LOCAL_MSG= "*:5555"
     LOCAL_CMD = "*:5556"
 
+
 def buildAddress(transport: Transport, endpoint: Endpoint) -> str:
-    if transport == Transport.TCP:
-        return f"{transport.value}://{endpoint.value}"
-    elif transport == Transport.IPC:
-        return f"{transport.value}:///tmp/{endpoint.value}"
-    elif transport == Transport.INPROC:
-        return f"{transport.value}://{endpoint.value}"
-    else:
-        raise ValueError(f"Unsupported transport type: {transport.value}")
+    return (f"{transport.name.lower()}{transport.value}{endpoint.value}")
+
 
 class ZmqPub:
     def __init__(self, transport: Transport, endpoint: Endpoint):

@@ -11,13 +11,15 @@ from collections import deque
 
 from client.zmqQtBridge import ZmqBridgeQt
 from common.logger import getmylogger
-from client.menus import DataSeriesTable
+from client.menus import TopicSeriesMenue
 from core.device import TopicMap
 import sys
 from dataclasses import dataclass , field, asdict
 from typing import List, Tuple, Union
 from enum import Enum
 import os, json
+import numpy
+print(numpy.__version__)
 
 """     
 Plot:   Subscribes to topics publishing data over ZMQ. 
@@ -49,6 +51,8 @@ PlotTypeMap = {
             "BAR": BarPlotCfg
         }
 
+
+
 @dataclass
 class PlotCfg():
     protocol: tuple[str, ...] = field(default_factory=tuple)
@@ -58,12 +62,12 @@ class PlotCfg():
     maxPlotSeries: int = 8
     sampleBufferLen: int = 100
 
-
 @dataclass
 class PlotAppCfg():
     #  list of plot configurations default to a single plot
     plotConfigs : List[PlotCfg] = field(default_factory=list)
     cfgFilePath: str = "config/cfg_plotApps.json"
+    maxPlots: int = 4
 
     def save(self):
         def serialize(obj):
@@ -72,6 +76,7 @@ class PlotAppCfg():
             return obj
         with open(self.cfgFilePath, "w") as file:
             json.dump(asdict(self), file, default=serialize, indent=4)
+   
     def load(self):
         # Load the configuration from the JSON file
         with open(self.cfgFilePath, "r") as file:
@@ -105,42 +110,54 @@ class PlotApp(QFrame):
     def __init__(self, configFilePath: str):
         super().__init__()
         self.log = getmylogger(__name__)
-        self.maxPlots = 4
         self.topicMap = TopicMap()
+        self.config = PlotAppCfg()
         self.topicMap.loadTopicsFromCSV('devicePub.csv')
         self.plots = list()
+
+    def beginApp(self):
         configDiag = PlotAppSettingsDialog(self.topicMap)
         if(configDiag.exec() == True):
-            self.config = configDiag.config
+            self.config = configDiag.settingsUI.config
+        self.log.debug("PlotApp Started")
+        self.initUI()
+        for plotCfg in self.config.plotConfigs:
+            self.newPlot(plotCfg)
+
     def initUI(self):
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_plt_handle)
+        self.tabs.setTabPosition(QTabWidget.TabPosition.South)
         self.grid = QGridLayout()
+        self.grid.addWidget(self.tabs, 1, 0, 4, 4)
         self.setLayout(self.grid)
 
+    def newPlot(self, plotCfg: PlotCfg):
+        if plotCfg.plotType == "LINE":
+            plot = LinePlot(plotCfg)
+        else :
+            raise NotImplementedError("Plot Type not implemented")
 
 
-    def close(self):
+        self.plots.append(plot)      
+        self.tabs.addTab(plot, plot.config.plotName)
+
+    def closeEvent(self, event):
         for plot in self.plots:
             plot.close()
-
-    def new_plot_hdl(self):
-        pass
 
 
     def close_plt_handle(self, index):
         pass
 
-    def settings_handle(self):
-        print("Settings")
-
-    def record_handle(self):
-        print("record")
 
 class BasePlot(QFrame):
     """Base class for plotting."""
     def __init__(self):
         """Constructor method for BasePlot class."""
         super().__init__()
-        self.name = ""
+        self.config = PlotCfg()
         self.log = getmylogger(__name__)
         self.zmqBridge = ZmqBridgeQt() 
         self.zmqBridge.msgSig.connect(self._updateData)
@@ -151,33 +168,29 @@ class BasePlot(QFrame):
         raise NotImplementedError("Subclasses must implement updateData method")
     
     def close(self):
-        self.log.debug(f"Closing Plot {self.name}")
+        self.log.debug(f"Closing Plot {self.config.plotName}")
         self.zmqBridge.workerIO._stop()  # stop device thread
 
 class LinePlot(BasePlot):
     """Class for line plotting."""
-    def __init__(self):
+    def __init__(self, config: PlotCfg):
         """Constructor method for LinePlot class."""
         super().__init__()  
-        self.name = "Line Plot"
-        self.x_len = int()
-        self.y_range = tuple()
-        self.protocol = tuple()
+        if(isinstance(config.typeCfg, LinePlotCfg)):
+            self.config = config
+    
         self.dataSet = dict()
         self.lines = list()
         self.initUI()
+        self.setupPlot()
 
-    def config(self, yrange: tuple[float, float], xrange: int, protocol: tuple[str, ...]):
-        self.x_len = xrange
-        self.y_range = yrange
-        self.protocol = protocol
+    def setupPlot(self):
+        self.xs = list(range(0, self.config.sampleBufferLen)) # time series (x-axis)
+        self.ax.set_ylim(self.config.typeCfg.yrange) 
 
-        self.xs = list(range(0, self.x_len)) # time series (x-axis)
-        self.ax.set_ylim(self.y_range) 
-
-        for label in self.protocol:
+        for label in self.config.protocol:
             self.zmqBridge.subscriber.addTopicSub(label)
-            self.dataSet[label] = [0] * self.x_len  # zero out data values array
+            self.dataSet[label] = [0] * self.config.sampleBufferLen  # zero out data values array
             line, = self.ax.plot(self.xs, self.dataSet[label], label=label )  # create a line on the plot
             self.lines.append(line)
         self.ax.legend(loc=1)
@@ -202,7 +215,6 @@ class LinePlot(BasePlot):
     def _updateData(self, msg: tuple[tuple, str]):
        # Grabs msg data from the worker thread
         topic, data = msg
-        print(topic,data)
         try:
             self.dataSet[topic].append(float(data))   
         except Exception as e:
@@ -212,13 +224,14 @@ class LinePlot(BasePlot):
     def animate(self, i, lines):
         # Update the plot with new data
         for line, (key, value) in zip(lines, self.dataSet.items()):
-            line.set_ydata(value[-self.x_len:])        # Update lines with new Y values
+            line.set_ydata(value[-self.config.sampleBufferLen:])        # Update lines with new Y values
         return lines
+
   
-
-
 # Settings Menus
-class PlotAppSettingsDialog(QDialog):
+
+
+class PlotAppSettings(QFrame):
     def __init__(self, topicMap: TopicMap):
         super().__init__()
         self.setWindowTitle("Plot Settings")
@@ -240,27 +253,17 @@ class PlotAppSettingsDialog(QDialog):
         self.save_PB.clicked.connect(self.save_handle)
         self.plotList = QListWidget()
         # Create a stack layout for the plot configurations
-        self.plotConfigStack = QStackedLayout()
-                    
+        self.plotConfigStack = QStackedLayout()       
         for idx in range(len(self.config.plotConfigs)):
             self.createPlotCfg(self.config.plotConfigs[idx]) 
-            
-
         # Auto switch plot config based on currently selected plot
         self.plotList.currentRowChanged.connect(self.plotConfigStack.setCurrentIndex)
         self.addPlot_PB = QPushButton("+")
         self.addPlot_PB.clicked.connect(lambda: self.addPlot_handle(PlotCfg()))
         self.removePlot_PB = QPushButton("-")
         self.removePlot_PB.clicked.connect(lambda: self.removePlot_handle(self.plotList.currentRow()))
-        # Dialog buttons
-        QBtn = (
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
+       
+        
         self.dataSeriesConfig = DataSeriesTableSettings(self.topicMap)
         # connect the button to the method of the current plot configuration
         self.dataSeriesConfig.addSeriesBtn.clicked.connect(
@@ -269,7 +272,6 @@ class PlotAppSettingsDialog(QDialog):
         self.dataSeriesConfig.removeSeriesBtn.clicked.connect(
             lambda: self.plotConfigStack.currentWidget().removeSeries()
         )
-
         # Layout
         grid = QGridLayout()
         grid.addWidget(self.cfgFile, 0, 0, 1, 2)
@@ -286,25 +288,17 @@ class PlotAppSettingsDialog(QDialog):
         vBox = QVBoxLayout()
         vBox.addLayout(hBox)
         vBox.addLayout(self.plotConfigStack)
-        vBox.addWidget(self.buttonBox)
         self.setLayout(vBox)
+
+    def applySettings(self):
+        self.updateConfig()
+        
 
     def addPlot_handle(self, plotCfg: PlotCfg):
        # Add a new plot confirufration to the stacked layout
         self.config.plotConfigs.append(plotCfg)
         self.createPlotCfg(plotCfg)
         
-
-    def createPlotCfg(self, plotCfg: PlotCfg):
-        new_plotSettings = PlotSettings(plotCfg)
-        self.plotList.addItem(new_plotSettings.plotName.text())
-        self.plotList.setCurrentRow(self.plotList.count()-1)
-        
-        new_plotSettings.plotName.textChanged.connect(lambda: self.plotList.currentItem().setText(new_plotSettings.plotName.text()))
-        self.plotConfigStack.addWidget(new_plotSettings)
-        self.plotConfigStack.setCurrentIndex(self.plotList.count()-1) # Auto switch to new plot config
-
-
     def removePlot_handle(self, index):
         # Remove the selected plot configuration from the stacked layout
         self.plotConfigStack.removeWidget(self.plotConfigStack.widget(index))
@@ -328,10 +322,19 @@ class PlotAppSettingsDialog(QDialog):
             for idx in range(len(self.config.plotConfigs)):
                 self.createPlotCfg(self.config.plotConfigs[idx])
 
-
     def save_handle(self):
         self.updateConfig()
         self.config.save()
+
+    def createPlotCfg(self, plotCfg: PlotCfg):
+        new_plotSettings = PlotSettings(plotCfg)
+        self.plotList.addItem(new_plotSettings.plotName.text())
+        self.plotList.setCurrentRow(self.plotList.count()-1)
+        
+        new_plotSettings.plotName.textChanged.connect(
+            lambda: self.plotList.currentItem().setText(new_plotSettings.plotName.text()))
+        self.plotConfigStack.addWidget(new_plotSettings)
+        self.plotConfigStack.setCurrentIndex(self.plotList.count()-1) # Auto switch to new plot config
 
     def updateConfig(self):
         # update settings with current plot configurations
@@ -339,8 +342,40 @@ class PlotAppSettingsDialog(QDialog):
         for i in range(self.plotList.count()):
             self.plotConfigStack.widget(i).updateConfig()
             self.config.plotConfigs[i] = self.plotConfigStack.widget(i).config
-        
 
+
+class PlotAppSettingsDialog(QDialog):
+    def __init__(self, topicMap: TopicMap):
+        super().__init__()
+        self.setWindowTitle("Plot Settings")
+        self.topicMap = topicMap
+        self.initUI()
+
+    def initUI(self):
+        # Dialog buttons on accept update the config with the current settings
+        self.settingsUI = PlotAppSettings(self.topicMap)
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.handleAccepted) 
+        self.buttonBox.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.settingsUI)
+        layout.addWidget(self.buttonBox)
+        self.setLayout(layout)
+
+    def handleAccepted(self):
+        self.settingsUI.applySettings()
+        self.accept()
+    
+
+
+
+
+ 
 class DataSeriesTableSettings(QFrame):
     def __init__(self, pubMap):
         super().__init__()
@@ -378,6 +413,7 @@ class PlotSettings(QFrame):
         self.log = getmylogger(__name__)
         self.config = plotCfg
         self.initUI()
+    
     def initUI(self):
         self.plotName = QLineEdit(self.config.plotName)
         self.plotType = QComboBox()

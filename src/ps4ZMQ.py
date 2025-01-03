@@ -1,5 +1,5 @@
 import pygame
-from client.controller import Commander
+from client.controller import ZMQCommander
 from core.ZmqDevice import Endpoint, Transport, ZmqPub
 import time
 def main():
@@ -8,7 +8,7 @@ def main():
     pygame.init()
     pygame.joystick.init()
 
-    cmdr = Commander()
+    cmdr = ZMQCommander()
     cmdr.publisher = ZmqPub(endpoint=Endpoint.LOCAL_CMD, transport=Transport.TCP)
     cmdr.publisher.bind()
 

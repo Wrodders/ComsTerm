@@ -1,9 +1,28 @@
 {
     "plotConfigs": [
         {
-            "protocol": [],
+            "protocol": [
+                "STATE/PITCH"
+            ],
             "plotType": "LINE",
-            "plotName": "Plot Test",
+            "plotName": "Plot 0",
+            "typeCfg": {
+                "yrange": [
+                    -100.0,
+                    100.0
+                ]
+            },
+            "maxPlotSeries": 8,
+            "sampleBufferLen": 100
+        },
+        {
+            "protocol": [
+                "STATE/UB",
+                "STATE/UL",
+                "STATE/UV"
+            ],
+            "plotType": "LINE",
+            "plotName": "Plot 1",
             "typeCfg": {
                 "yrange": [
                     -100.0,
@@ -14,5 +33,6 @@
             "sampleBufferLen": 100
         }
     ],
-    "cfgFilePath": "config/cfg_plotApps.json"
+    "cfgFilePath": "config/cfg_plotApps.json",
+    "maxPlots": 4
 }

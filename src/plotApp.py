@@ -3,6 +3,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 from client.plot import PlotApp
+from common.zmqutils import buildAddress, Transport, Endpoint
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

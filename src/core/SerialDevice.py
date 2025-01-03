@@ -47,11 +47,11 @@ class SerialDevice(BaseDevice):
         return True
     
     def _stop(self):
-        self.msgPublisher.close()   
+        self.pubCmdSckt.close()   
 
     def _readDevice(self):
         self.log.debug("Started Serial Interface I/O Thread")
-        self.msgPublisher.bind()
+        self.pubCmdSckt.bind()
         
         self.log.debug(f"Publishing: {[t.name for t in self.pubMap.getTopics()]}")
         while (not self.workerRead.stopEvent.is_set()):
@@ -80,16 +80,16 @@ class SerialDevice(BaseDevice):
                 return 
 
         self.log.debug(f'Exit {self.info.devType.name} Read Thread')
-        self.msgPublisher.close()   
+        self.pubCmdSckt.close()   
         
 
     def _writeDevice(self):        
         self.log.debug("Started Serial Interface Write Thread")
-        self.cmdSubscriber.addTopicSub(f"{self.info.name}")
-        self.cmdSubscriber.connect()
+        self.subMsgSkt.addTopicSub(f"{self.info.name}")
+        self.subMsgSkt.connect()
         while (not self.workerWrite.stopEvent.is_set()):
             try: # Grab Message from Subscription Socket
-                topic, message = self.cmdSubscriber.receive();
+                topic, message = self.subMsgSkt.receive();
                 if(message and self.port.writable()):
                     print("write", message)
                     self.port.write(message.encode())

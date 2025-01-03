@@ -29,7 +29,7 @@ class ZmqInfo(DeviceInfo):
     clientCmd_transport : Transport = Transport.IPC
     clientCmd_endpoint : Endpoint = Endpoint.COMSTERM_CMD
 
-class ZmqDevice(BaseDevice):
+class ZmqProxy(BaseDevice):
     def __init__(self, info: ZmqInfo ): 
         super().__init__(pubEndpoint=info.pubEndpoint, pubTransport=info.pubTransport, 
                         cmdEndpoint=info.cmdEndpoint, cmdTransport=info.cmdTransport)   
@@ -37,51 +37,34 @@ class ZmqDevice(BaseDevice):
         self.info = info
 
         self.pubMap.loadTopicsFromCSV('devicePub.csv')
-        self.clientSub  = ZmqSub(transport=self.info.clientSub_transport, endpoint=self.info.clientSub_endpoint) 
-        self.clientPub  = ZmqPub(transport=self.info.clientCmd_transport, endpoint=self.info.clientCmd_endpoint) 
-        
+
+        self.proxySub = ZmqSub(info.clientSub_transport, info.clientSub_endpoint)
+        self.proxyPub = ZmqPub(info.clientCmd_transport, info.clientCmd_endpoint)
+        self.workerIO = Worker(self._run)
+
     def _start(self) -> bool:
-        self.workerRead._begin()
-        self.workerWrite._begin()
+        self.proxySub.connect()
+        self.proxyPub.bind()
+        self.workerIO._begin()
         return True
-    
+
     def _stop(self):
-        self.clientPub.close()
-        self.msgPublisher.close()   
+        self.proxySub.close()
+        self.proxyPub.close()
 
-    def _readDevice(self):
-        self.msgPublisher.bind()
-        self.clientSub.connect()
-        self.clientSub.addTopicSub("") # Allowing for Pb Sub Multiple Devices
-        self.log.info(f"Started ZMQ Device")
-        while (not self.workerRead.stopEvent.is_set()):
+    def _run(self):
+        self.log.info(f"Started ZmqProxy I/O Thread")
+        while not self.workerIO.stopEvent.is_set():
             try:
-                topic, data = self.clientSub.receive()
-                if(topic):
-                    self.msgPublisher.send(topic=topic, data=data)
+                topic, msg = self.proxySub.receive()
+                if((topic or msg) != ""):
+                    self.pubCmdSckt.publish(topic, msg)
             except Exception as e:
-                    self.log.warning(f"Exception in ZmqDeviceRun:{e} ")
-                    pass
-            
-        self.log.info("Exit Zmq Device I/O Thread")  
-        return
-    
-    def _writeDevice(self):
-        self.log.debug("Started ZMQ Device Write Thread")
-        self.clientPub.bind()
-        self.cmdSubscriber.connect()
-        self.cmdSubscriber.addTopicSub("") # Allowing for Pb Sub Multiple Devices
-        self.log.info(f"Started ZMQ Device")
-        while (not self.workerRead.stopEvent.is_set()):
-            try:
-                topic, data = self.cmdSubscriber.receive()
-                #print(topic, data)
-                self.clientPub.send(topic=topic, data=data)
-            except Exception as e:
-                    self.log.warning(f"Exception in ZmqDeviceWRITE:{e} ")
-                    pass
+                self.log.error(f"Exception in ZmqProxy {e}")
+                break
+        self.log.info("Exiting ZmqProxy I/O Thread")
 
-        self.log.debug("Exit ZMQ Interface Write Thread")
+
     
 
     

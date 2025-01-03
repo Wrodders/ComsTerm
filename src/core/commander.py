@@ -1,16 +1,16 @@
 from common.messages import ParameterMap
 from common.zmqutils import ZmqPub, Endpoint, Transport
 
-class Commander():
+
+class ZMQCommander():
     def __init__(self):
         self.paramRegMap = ParameterMap()
         self.paramRegMap.loadParametersFromCSV('paramRegMap.csv')
-        self.publisher = ZmqPub(endpoint=Endpoint.COMSTERM_CMD, transport=Transport.INPROC)
+        self.publisher = ZmqPub(endpoint=Endpoint.COMSTERM_CMD, transport=Transport.IPC)
         self.publisher.bind()
         
     def sendGetCmd(self, paramName :str):
         paramId = self.paramRegMap.getParameterByRegister(paramName)
-        
         if(paramId):
             paramId = paramId.address
             # SOF | TYPE | ID | DATA(0)| EOF

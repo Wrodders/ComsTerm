@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import *
 from client.zmqQtBridge import ZmqBridgeQt
 from common.logger import getmylogger
 from common.messages import TopicMap
-from client.menus import DataSeriesTable
+from client.menus import TopicSeriesMenue
 
 class ConsoleApp(QFrame):
     def __init__(self):
@@ -32,10 +32,11 @@ class ConsoleApp(QFrame):
         grid.addWidget(self.clear_PB, 4,1, 1,1)
         grid.addWidget(self.new_console_PB, 4,2,1,1)
 
-    def close(self):
+    def closeEvent(self, event):
         for console in self.consoles:
             console.close()
-    
+        event.accept()
+        
     def close_tab_handle(self, index):
         active_console = self.tabs.widget(index)
         if(isinstance(active_console, Console)):
@@ -132,7 +133,7 @@ class ConfigConsole(QDialog):
 
         self.setWindowTitle("New Console")
 
-        self.topicMenu= DataSeriesTable(topicMap)
+        self.topicMenu= TopicSeriesMenue(topicMap)
     
         QBtn = (
             QDialogButtonBox.StandardButton.Ok

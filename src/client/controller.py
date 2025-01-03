@@ -7,8 +7,9 @@ from common.zmqutils import ZmqPub, Transport, Endpoint
 from common.messages import Parameter, ParameterMap
 from client.joystick import JoystickButton
 from common.logger import getmylogger
+from client.console import Console
 
-from core.commander import Commander
+from core.commander import ZMQCommander
 
 from multiprocessing import Process, Pipe
 
@@ -20,22 +21,20 @@ class ControlsApp(QFrame):
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
-        self.cmdr = Commander()
-        self.paramUI = ParamUI(paramMap=self.cmdr.paramRegMap)
-        self.controller = Controller(paramMap=self.cmdr.paramRegMap)
-        self.fileCmdr = FileCmd(paramMap=self.cmdr.paramRegMap)
+        self.cmdr = ZMQCommander()
+        self.paramConfigApp = ParamConfigApp(paramMap=self.cmdr.paramRegMap)
+        self.joystickApp = JoyController(paramMap=self.cmdr.paramRegMap)
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(False)
-        self.tabs.addTab(self.paramUI, "Params")
-        self.tabs.addTab(self.controller, "Controller")
+        self.tabs.addTab(self.paramConfigApp, "Params")
+        self.tabs.addTab(self.joystickApp, "Controller")
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.tabs)
         self.setLayout(vbox)
-
-        self.controller.joystickDataChanged.connect(self.sendJoystickCmd)
-
-        for param in self.paramUI.paramTable:
+        # Connect App Signals to Commander 
+        self.joystickApp.joystickDataChanged.connect(self.sendJoystickCmd)        
+        for param in self.paramConfigApp.paramTable:
             if(isinstance(param, ParamReg)):
                 param.get_btn.clicked.connect(lambda checked, p=param: self.cmdr.sendGetCmd(paramName=p.label.text()))
                 param.set_btn.clicked.connect(lambda checked, p=param: self.cmdr.sendSetCmd(paramName=p.label.text(), value=p.value_entry.text()))
@@ -44,11 +43,15 @@ class ControlsApp(QFrame):
         self.cmdr.sendSetCmd(paramName, str(value))
 
     def _stop(self):
-        self.controller.stopPs4Process()
+        self.joystickApp.stopPs4Process()
         self.cmdr.publisher.close()
 
+    def closeEvent(self, event):
+        self._stop()
+        event.accept()
 
-class Controller(QFrame):
+
+class JoyController(QFrame):
     joystickDataChanged = QtCore.pyqtSignal(str, float)
     def __init__(self, paramMap: ParameterMap):
         super().__init__()
@@ -146,8 +149,7 @@ class Controller(QFrame):
                 self.joystickDataChanged.emit(xName, -rx)
                 self.joystickDataChanged.emit(yName, ry)
 
-
-class ParamUI(QFrame):
+class ParamConfigApp(QFrame):
     def __init__(self, paramMap: ParameterMap):
         super().__init__()
         self.scroll_area = QScrollArea()
@@ -170,7 +172,6 @@ class ParamUI(QFrame):
         self.scroll_area.setWidget(self.scroll_content)
         vBox.addWidget(self.scroll_area) 
         self.setLayout(vBox)
-
 
 class ParamReg(QFrame):
     def __init__(self, paramName: str):
@@ -199,53 +200,5 @@ class ParamReg(QFrame):
 
     def get_handle(self):
         pass
-
-
-class FileCmd(QFrame):
-    def __init__(self, paramMap : ParameterMap):
-        super().__init__
-        self.paramCombo = QComboBox()
-        self.paramCombo.addItems([name for name in paramMap.getParameterNames()])
-        self.csv_file = str
-        self.fileSearch = QPushButton("Open File")
-        self.file_lable = QLabel()
-
-        self.time_data = []
-        self.signal_data = []
-    def _openFile_diag(self):
-        filename , _ = QFileDialog.getOpenFileName(self, "Select csv file", "")
-        if filename: 
-            self.file_lable.setText(f"Selected File: {filename}")
-            self._load_data(filename)
-
-    def _load_data(self,csv_file: str ):
-        """Reads the signal data from the CSV file."""
-        try:
-            with open(csv_file, mode='r') as file:
-                reader = csv.reader(file)
-                next(reader)  # Skip the header row
-                for row in reader:
-                    self.time_data.append(float(row[0]))  # Time in seconds
-                    self.signal_data.append(float(row[1]))  # Signal value
-            print(f"Loaded {len(self.time_data)} data points from {self.csv_file}.")
-        except Exception as e:
-            print(f"Error reading the CSV file: {e}")
-            exit(1)
-
-    def publish_data(self):
-        """Publishes the signal data every `sample_period` seconds."""
-        start_time = time.time()
-        for t, signal in zip(self.time_data, self.signal_data):
-            # Wait until the correct time to send the next sample
-            elapsed_time = time.time() - start_time
-            time_to_wait = max(0, t - elapsed_time)
-            time.sleep(time_to_wait)
-            
-            # Instead of ZeroMQ, just print the data
-            print(f"Time: {t:.3f}s, Signal: {signal:.3f}")
-            
-            # Wait for the next sample
-            time.sleep(self.sample_period)  # Ensure 100ms interval between prints
-
 
 

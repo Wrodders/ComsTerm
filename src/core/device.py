@@ -39,8 +39,8 @@ class BaseDevice():
 
         self.workerRead = Worker(self._readDevice)
         self.workerWrite = Worker(self._writeDevice) 
-        self.msgPublisher = ZmqPub(pubTransport, pubEndpoint)
-        self.cmdSubscriber = ZmqSub(cmdTransport, cmdEndpoint)
+        self.pubCmdSckt = ZmqPub(pubTransport, pubEndpoint)
+        self.subMsgSkt = ZmqSub(cmdTransport, cmdEndpoint)
         # Create Base Topic Maps
         self.pubMap = TopicMap()
 
@@ -65,6 +65,6 @@ class BaseDevice():
             if(topic.nArgs > 0):
                 msgArgs = data.split(topic.delim)
                 msgSubTopics = [( topic.name +"/" +arg) for arg in topic.args]
-                [self.msgPublisher.send(topic=msgSubTopics[i], data=msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                [self.pubCmdSckt.send(topic=msgSubTopics[i], data=msgArgs[i]) for i, _ in enumerate(msgArgs)]
             else:
-                self.msgPublisher.send(topic=(topic.name +"/"), data=data)
+                self.pubCmdSckt.send(topic=(topic.name +"/"), data=data)

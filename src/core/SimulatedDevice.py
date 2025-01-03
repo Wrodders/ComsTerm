@@ -38,11 +38,11 @@ class SimulatedDevice(BaseDevice):
         self.workerWrite._begin()
         return True
     def _stop(self):
-        self.msgPublisher.close()   
+        self.pubCmdSckt.close()   
     
     def _readDevice(self):
         self.log.debug("Started Simulated Device Read Thread")
-        self.msgPublisher.bind()
+        self.pubCmdSckt.bind()
         self.log.info(f"Publishing: {[t.name for t in self.pubMap.getTopics()]}")
         while (not self.workerRead.stopEvent.is_set()):
             try: # Send Cmd MsgPacket to Device    
@@ -53,7 +53,7 @@ class SimulatedDevice(BaseDevice):
                     delim , args = self.pubMap.getTopicFormat(topic)
                     msgArgs = msg.split(delim)
                     msgSubTopics = [( topic + "/" + arg) for arg in args]
-                    [self.msgPublisher.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
+                    [self.pubCmdSckt.send(msgSubTopics[i], msgArgs[i]) for i, _ in enumerate(msgArgs)]
                     self.lastTime=time.time()
                     
             except Exception as e:

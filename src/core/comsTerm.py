@@ -5,7 +5,7 @@ from common.logger import getmylogger
 
 from core.device import BaseDevice, Devices, DeviceInfo, Endpoint, Transport
 from core.SerialDevice import SerialDevice, SerialInfo
-from core.ZmqDevice import ZmqDevice, ZmqInfo
+from core.ZmqDevice import ZmqProxy, ZmqInfo
 from core.SimulatedDevice import SimulatedDevice, SimInfo
 
 
@@ -28,7 +28,7 @@ class ComsTerm():
         elif isinstance(deviceInfo, SimInfo):
             self.device = SimulatedDevice(deviceInfo)
         elif isinstance(deviceInfo, ZmqInfo):
-            self.device = ZmqDevice(deviceInfo)
+            self.device = ZmqProxy(deviceInfo)
             
         if(isinstance(self.device, BaseDevice)):
             if self.device._start() == False:
