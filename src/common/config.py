@@ -39,7 +39,7 @@ class PlotCfg(SinkCfg):
 
 @dataclass
 class PlotAppCfg():
-    plotConfigs : List[PlotCfg] = field(default_factory=lambda: [PlotCfg()])
+    plotConfigs : List[PlotCfg] = field(default_factory=lambda: [PlotCfg()]) # Default Plot Config
     maxPlots: int = 4
 
     def load(self, cfgFile: str):
@@ -48,7 +48,7 @@ class PlotAppCfg():
             self.populate(cfg_data)
 
     def populate(self, cfg_data: dict):
-        self.plotConfigs = list()
+        self.plotConfigs = list() # Reset plotConfigs list
         for cfg in cfg_data["plotConfigs"]:
             if(cfg.get("plotName") in [cfg.name for cfg in self.plotConfigs]):
                 continue # Skip duplicate plot names
@@ -63,7 +63,7 @@ class ConsoleCfg(SinkCfg):
 
 @dataclass
 class ConsoleAppCfg():
-    consoleCfgs : list[ConsoleCfg] = field(default_factory=lambda: [ConsoleCfg()])
+    consoleCfgs : list[ConsoleCfg] = field(default_factory=lambda: [ConsoleCfg()]) # Default Console Config
     maxNumConsoles : int = 4
 
     def load(self, cfgFile: str):
@@ -72,13 +72,13 @@ class ConsoleAppCfg():
             self.populate(cfg_data)
    
     def populate(self, cfg_data: dict):
-        self.maxNumConsoles = cfg_data["maxNumConsoles"]
+        self.consoleCfgs = list() # Reset consoleCfgs list
         for consoleCfg in cfg_data["consoleCfgs"]:
             if(consoleCfg.get("name") in [cfg.name for cfg in self.consoleCfgs]):
-                continue # Skip duplicate console names
+                continue
+            print(consoleCfg)
             self.consoleCfgs.append(ConsoleCfg(**consoleCfg)) # unpack dict to ConsoleCfg
-
-
+        self.maxNumConsoles = cfg_data["maxNumConsoles"]
 """ ----------------- Controls App Config ----------------- """
 @dataclass
 class ControllerCfg():

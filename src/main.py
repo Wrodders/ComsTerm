@@ -33,6 +33,7 @@ class App(QMainWindow):
         if(cfgFile != None):
             self.log.info(f"Loading Config File: {cfgFile}")
             self.config.load(cfgFile)
+           
         else:
             self.log.info("No Config File Provided, Opening Settings")
          
@@ -49,7 +50,6 @@ class App(QMainWindow):
         self.plotApp = PlotApp(self.config.plotAppCfg, self.config.topicMap)
         self.appWindows.append(self.plotApp)
         self.plotApp.show()
-
         self.consoleApp = ConsoleApp(self.config.consoleAppCfg, self.config.topicMap)
         self.appWindows.append(self.consoleApp)
         self.consoleApp.show()
@@ -111,7 +111,7 @@ class App(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    guiApp = App(None)
+    guiApp = App("config/test.json")
     guiApp.show()
 
     sys.exit(app.exec())

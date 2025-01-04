@@ -216,6 +216,7 @@ class ControlsAppSettings(SettingsUI):
 
     def initUI(self):
         self.paramMapEntry = FileExplorer("Parameter Map")
+        self.paramMapEntry.fileEntry.setText(self.config.paramRegMapFile)
         layout = QVBoxLayout()
         layout.addWidget(self.paramMapEntry)
         self.setLayout(layout)

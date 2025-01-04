@@ -18,7 +18,6 @@ class ConsoleApp(QFrame):
         self.topicMap = topicMap
         self.consoles = list()
         self.initUI()
-
         for consoleCfg in self.config.consoleCfgs:
             self.newConsole(consoleCfg)
 
@@ -203,6 +202,7 @@ class ConsoleSettings(SettingsUI):
     def updateConfig(self):
         self.config.name = self.consoleName.text()
         self.config.sampleBufferLen = int(self.sampleBuffer.text())
+        self.config.protocol = self.table.grabProtocol()
 
         
 

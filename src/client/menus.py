@@ -93,12 +93,13 @@ class DataSeriesTable(QFrame):
         self.setLayout(layout)
 
     def grabProtocol(self) -> tuple[str, ...]:
-        # Save current argument names of the table to a tuple protocol
+        # Grab protocol from Table, return as a tuple of rows
+        # separate collums with a "/"
         protocol = tuple()
         for row in range(self.table.rowCount()):
-            item = self.table.item(row, 0)
-            if(isinstance(item, QTableWidgetItem)):
-                protocol += (item.text() + "/" + item.text(),)
+            topic = self.table.item(row, 0).text()
+            arg = self.table.item(row, 1).text()
+            protocol += (topic + "/" + arg,)  
         return protocol
     
     def loadProtocol(self, protocol: tuple[str, ...]):

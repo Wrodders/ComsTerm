@@ -3,30 +3,56 @@
         "plotConfigs": [
             {
                 "protocol": [
-                    "IMURAW/IMURAW"
+                    "STATE/LW",
+                    "STATE/RW",
+                    "STATE/UL",
+                    "STATE/UR",
+                    "STATE/TL",
+                    "STATE/TR"
                 ],
-                "name": "Sink 0",
+                "name": "Motor",
                 "sampleBufferLen": 100,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -100.0,
-                        100.0
+                        -8.0,
+                        8.0
                     ]
                 },
                 "maxPlotSeries": 8
             },
             {
                 "protocol": [
-                    "STATE/STATE"
+                    "STATE/PITCH",
+                    "STATE/UB",
+                    "STATE/UV",
+                    "STATE/LINVEL"
                 ],
-                "name": "Test",
+                "name": "Balance",
                 "sampleBufferLen": 100,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -100.0,
-                        100.0
+                        -45.0,
+                        45.0
+                    ]
+                },
+                "maxPlotSeries": 8
+            },
+            {
+                "protocol": [
+                    "STATE/LINVEL",
+                    "STATE/ANGVEL",
+                    "STATE/UA",
+                    "STATE/UV"
+                ],
+                "name": "Sink 0",
+                "sampleBufferLen": 100,
+                "plotType": "LINE",
+                "typeCfg": {
+                    "yrange": [
+                        -4.0,
+                        4.0
                     ]
                 },
                 "maxPlotSeries": 8
@@ -37,13 +63,8 @@
     "consoleApp": {
         "consoleCfgs": [
             {
-                "protocol": [],
+                "protocol": ["ERROR/", "INFO/", "DEBUG/", "CMD_RET/"],
                 "name": "Console 0",
-                "sampleBufferLen": 100
-            },
-            {
-                "protocol": [],
-                "name": "Test",
                 "sampleBufferLen": 100
             }
         ],
