@@ -1,0 +1,23 @@
+{   "appConfigs" : [
+        { "plotConfigs": [
+            {
+                "protocol": [
+                    "CMD_RET/",
+                    "INFO/"
+                ],
+                "plotType": "LINE",
+                "plotName": "Plot 03",
+                "typeCfg": {
+                    "yrange": [
+                        -100.0,
+                        100.0
+                    ]
+                },
+                "maxPlotSeries": 8,
+                "sampleBufferLen": 100
+            }
+        ],
+        "maxPlots": 4
+    }
+]
+}

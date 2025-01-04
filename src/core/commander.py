@@ -3,9 +3,9 @@ from common.zmqutils import ZmqPub, Endpoint, Transport
 
 
 class ZMQCommander():
-    def __init__(self):
+    def __init__(self, paramRegMapFile:str):
         self.paramRegMap = ParameterMap()
-        self.paramRegMap.loadParametersFromCSV('paramRegMap.csv')
+        self.paramRegMap.loadParametersFromCSV(paramRegMapFile)
         self.publisher = ZmqPub(endpoint=Endpoint.COMSTERM_CMD, transport=Transport.IPC)
         self.publisher.bind()
         

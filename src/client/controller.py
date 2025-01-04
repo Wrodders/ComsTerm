@@ -2,26 +2,29 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
-import sys
-from common.zmqutils import ZmqPub, Transport, Endpoint
-from common.messages import Parameter, ParameterMap
-from client.joystick import JoystickButton
-from common.logger import getmylogger
-from client.console import Console
-
-from core.commander import ZMQCommander
 
 from multiprocessing import Process, Pipe
+import sys, os
 
+from common.config import ControllerCfg
+from common.zmqutils import ZmqPub, Transport, Endpoint
+from common.messages import Parameter, ParameterMap
+from common.logger import getmylogger
+
+from client.console import Console
+from client.joystick import JoystickButton
+
+from core.commander import ZMQCommander
 from core.ps4Joy import ps4_joystick_handler
 
-import csv, time
 
+""" ----------------- Controls App ----------------- """
 class ControlsApp(QFrame):
-    def __init__(self):
+    def __init__(self, config: ControllerCfg):
         super().__init__()
         self.log = getmylogger(__name__)
-        self.cmdr = ZMQCommander()
+        self.config = config
+        self.cmdr = ZMQCommander(config.paramRegMapFile)
         self.paramConfigApp = ParamConfigApp(paramMap=self.cmdr.paramRegMap)
         self.joystickApp = JoyController(paramMap=self.cmdr.paramRegMap)
         self.tabs = QTabWidget()
@@ -50,7 +53,6 @@ class ControlsApp(QFrame):
         self._stop()
         event.accept()
 
-
 class JoyController(QFrame):
     joystickDataChanged = QtCore.pyqtSignal(str, float)
     def __init__(self, paramMap: ParameterMap):
@@ -62,19 +64,19 @@ class JoyController(QFrame):
         self.xVal_lbl = QLabel("0")
         self.xPrmCombo = QComboBox()
         self.xPrmCombo.addItems([name for name in paramMap.getParameterNames()])
-        self.ylable = QLabel("Y Param:")
+        self.ylabel = QLabel("Y Param:")
         self.yVal_lbl = QLabel("0")
         self.yPrmCombo = QComboBox()
         self.yPrmCombo.addItems([name for name in paramMap.getParameterNames()])
         self.usePS4_ck = QCheckBox()
         self.usePS4_ck.clicked.connect(self.handlePs4)
-        self.usePS4_lbl  = QLabel("Use PS4 Constroller")
+        self.usePS4_lbl  = QLabel("Use PS4 Controller")
 
         grid.addWidget(self.joyBtn,0,1,1,3)
         grid.addWidget(self.xlable,1,0)
         grid.addWidget(self.xPrmCombo,1,1)
         grid.addWidget(self.xVal_lbl,2,1)
-        grid.addWidget(self.ylable,1,2)
+        grid.addWidget(self.ylabel,1,2)
         grid.addWidget(self.yPrmCombo,1,3)
         grid.addWidget(self.yVal_lbl,2,3)
         grid.addWidget(self.usePS4_lbl, 3,0)
@@ -201,4 +203,16 @@ class ParamReg(QFrame):
     def get_handle(self):
         pass
 
+""" ----------------- Controls App Settings ----------------- """
+
+class ControlsAppSettings(QFrame):
+    def __init__(self, config: ControllerCfg):
+        super().__init__()
+        self.log = getmylogger(__name__)
+        self.config = config
+        self.initUI()
+
+    def initUI(self):
+        pass
+ 
 

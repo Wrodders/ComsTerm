@@ -3,39 +3,63 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QAction
 
-import sys
+import sys, os
+from dataclasses import dataclass , field, asdict
+import json
 
 from common.logger import getmylogger
-from common.messages import TopicMap
+from common.messages import TopicMap, ParameterMap
+from common.config import SessionConfig, PlotAppCfg, PlotCfg, AppTypeMap, ConsoleAppCfg, ControllerCfg
 
 from core.device import BaseDevice 
 from core.comsTerm import ComsTerm
 
+from client.menus import FileExplorer
 from client.plot import  LinePlot, PlotApp
-from client.console import ConfigConsole, Console, ConsoleApp
+from client.console import ConsoleAppSettings, Console, ConsoleApp
 from client.controller import ControlsApp
+from client.gui import AppSettingsDialog, SessionConfig, AppSettings
+from client.plot import PlotAppCfg, PlotAppSettings, PlotApp, PlotCfg
 
 
-from client.plot import PlotAppCfg
-from dataclasses import dataclass , field, asdict
-
-
-@dataclass
-class AppConfig():
-    plotCfg: PlotAppCfg = field(default_factory=PlotAppCfg)
-   
-    
 class App(QMainWindow):
-    def __init__(self):
+    def __init__(self, cfgFile: str):
         super().__init__()
         self.log = getmylogger(__name__)
         self.setWindowTitle("ComsTermV6")
-        self.config = AppConfig()
+        self.config = SessionConfig() # Default Config
+        self.appWindows = list()
+        # Load Config File if provided
+        if(cfgFile != None):
+            self.log.info(f"Loading Config File: {cfgFile}")
+            self.config.load(cfgFile)
+        else:
+            self.log.info("No Config File Provided, Opening Settings")
+         
+            diag = AppSettingsDialog(self.config) # Settings Menu with default config
+            if(diag.exec() == True):
+                self.config = diag.settingsUI.config # Update Config with new settings
+
+        self.launchSession()
+
+    def launchSession(self):
+        self.log.info("Launching Session")
         self.initMenu()
-        # Set the central widget as GUI
-        self.gui = GUI()
-        self.launchPlot()
-        self.setCentralWidget(self.gui)
+        self.initUI()
+    def initUI(self):
+       # Lauch Apps
+        for cfg in self.config.appCfgs:
+            if(isinstance(cfg.typeCfg, PlotAppCfg)):
+                self.appWindows.append(PlotApp(cfg.typeCfg, self.config.topicMap))
+            elif(isinstance(cfg.typeCfg, ConsoleAppCfg)):
+                self.appWindows.append(ConsoleApp(cfg.typeCfg, self.config.topicMap))
+            elif(isinstance(cfg.typeCfg, ControllerCfg)):
+                self.appWindows.append(ControlsApp(cfg.typeCfg))
+            else:
+                self.log.error("Unknown App Type")
+
+        
+       
 
     def initMenu(self):
         # Menu Bar setup
@@ -66,61 +90,27 @@ class App(QMainWindow):
 
         self.setMenuBar(self.menu_bar)
 
-
     def settings(self):
         self.log.debug("Opening Settings")
 
     def newPlot(self):
         self.log.debug("Opening New Plot")
 
-    def launchPlot(self):
-        self.log.debug("Launching PlotApp")
-        self.gui.plotApp.beginApp()
-
     def newConsole(self):
         self.log.debug("Opening New Console")
 
     def clearAll(self):
         self.log.debug("Clearing All Consoles")
-        self.gui.consoleApp.clearAll()
 
     def closeEvent(self, event):
         self.log.info("Closing App")
         event.accept()
 
-class GUI(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.log = getmylogger(__name__)
-        self.setWindowTitle("ComsTermV5")
-        self.windows = list()
-        # Create applications
-        self.controlsApp = ControlsApp()
-        self.plotApp = PlotApp("config/cfg_plotCfg.json")
-        self.consoleApp = ConsoleApp()
-        
-        self.initUI()
-    def initUI(self):
-        # Vertical Splitter: Controls and Console apps
-        vSplit = QSplitter(Qt.Orientation.Vertical)
-        vSplit.addWidget(self.controlsApp)
-        vSplit.addWidget(self.consoleApp)
-        vSplit.setSizes([300, 100])
-
-        # Horizontal Splitter: Plot and (Controls + Console)
-        hSplit = QSplitter(Qt.Orientation.Horizontal)
-        hSplit.addWidget(self.plotApp)
-        hSplit.addWidget(vSplit)
-        hSplit.setSizes([300, 100])
-
-        hBox = QHBoxLayout()
-        hBox.addWidget(hSplit)
-        self.setLayout(hBox)
 
 
 def main():
     app = QApplication(sys.argv)
-    guiApp = App()
+    guiApp = App(None)
     guiApp.show()
 
     sys.exit(app.exec())
