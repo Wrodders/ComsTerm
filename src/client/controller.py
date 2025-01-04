@@ -11,8 +11,10 @@ from common.zmqutils import ZmqPub, Transport, Endpoint
 from common.messages import Parameter, ParameterMap
 from common.logger import getmylogger
 
+
 from client.console import Console
 from client.joystick import JoystickButton
+from client.menus import FileExplorer, SettingsUI
 
 from core.commander import ZMQCommander
 from core.ps4Joy import ps4_joystick_handler
@@ -205,7 +207,7 @@ class ParamReg(QFrame):
 
 """ ----------------- Controls App Settings ----------------- """
 
-class ControlsAppSettings(QFrame):
+class ControlsAppSettings(SettingsUI):
     def __init__(self, config: ControllerCfg):
         super().__init__()
         self.log = getmylogger(__name__)
@@ -213,6 +215,12 @@ class ControlsAppSettings(QFrame):
         self.initUI()
 
     def initUI(self):
-        pass
+        self.paramMapEntry = FileExplorer("Parameter Map")
+        layout = QVBoxLayout()
+        layout.addWidget(self.paramMapEntry)
+        self.setLayout(layout)
+
+    def updateConfig(self):
+        self.config.paramRegMapFile = self.paramMapEntry.fileEntry.text()
  
 

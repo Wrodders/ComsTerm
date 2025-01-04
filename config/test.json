@@ -1,23 +1,55 @@
-{   "appConfigs" : [
-        { "plotConfigs": [
+{
+    "plotApp": {
+        "plotConfigs": [
             {
                 "protocol": [
-                    "CMD_RET/",
-                    "INFO/"
+                    "IMURAW/IMURAW"
                 ],
+                "name": "Sink 0",
+                "sampleBufferLen": 100,
                 "plotType": "LINE",
-                "plotName": "Plot 03",
                 "typeCfg": {
                     "yrange": [
                         -100.0,
                         100.0
                     ]
                 },
-                "maxPlotSeries": 8,
-                "sampleBufferLen": 100
+                "maxPlotSeries": 8
+            },
+            {
+                "protocol": [
+                    "STATE/STATE"
+                ],
+                "name": "Test",
+                "sampleBufferLen": 100,
+                "plotType": "LINE",
+                "typeCfg": {
+                    "yrange": [
+                        -100.0,
+                        100.0
+                    ]
+                },
+                "maxPlotSeries": 8
             }
         ],
         "maxPlots": 4
+    },
+    "consoleApp": {
+        "consoleCfgs": [
+            {
+                "protocol": [],
+                "name": "Console 0",
+                "sampleBufferLen": 100
+            },
+            {
+                "protocol": [],
+                "name": "Test",
+                "sampleBufferLen": 100
+            }
+        ],
+        "maxNumConsoles": 4
+    },
+    "controlsApp": {
+        "paramRegMapFile": "paramRegMap.csv"
     }
-]
 }

@@ -10,7 +10,7 @@ from client.console import ConsoleAppSettings
 from client.controller import ControlsAppSettings
 
 from common.logger import getmylogger
-from common.config import SessionConfig, AppTypeMap, PlotAppCfg, ConsoleAppCfg, ControllerCfg, AppCfg, CfgBase
+from common.config import SessionConfig, AppTypeMap, PlotAppCfg, ConsoleAppCfg, ControllerCfg
 
 
 
@@ -50,9 +50,14 @@ class AppSettings(QFrame):
         self.setLayout(layout)
 
     def updateConfig(self):
+        # Update Configs For each App Settings
         self.plotSettings.updateConfig()
         self.consoleSettings.updateConfig()
         self.controlsSettings.updateConfig()
+        # Apply to Session Config
+        self.config.plotAppCfg = self.plotSettings.config
+        self.config.consoleAppCfg = self.consoleSettings.config
+        self.config.controllerAppCfg = self.controlsSettings.config
 
     def load_handle(self):
         print("Load Config")

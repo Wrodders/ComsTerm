@@ -3,7 +3,7 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 from client.zmqQtBridge import ZmqBridgeQt
-from client.menus import DataSeriesTableSettings, DataSeriesTable
+from client.menus import DataSeriesTableSettings, DataSeriesTable, SettingsUI
 
 from common.logger import getmylogger
 from common.messages import TopicMap
@@ -80,17 +80,15 @@ class Console(QWidget):
 
     def initUI(self):
         """Initializes the user interface."""
-        self.setMinimumWidth(300)
-        # Create Layout
-        self.vBox = QVBoxLayout()
-        self.vBox.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.vBox)
-
         self.consoleText = QTextEdit()
         self.consoleText.setReadOnly(True)
         self.consoleText.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.consoleText.setAcceptRichText(True)
         self.consoleText.setStyleSheet("background-color: black; color: green;")
+        
+        self.vBox = QVBoxLayout()
+        self.vBox.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.vBox)
         self.vBox.addWidget(self.consoleText)
 
     def clear(self):
@@ -108,7 +106,7 @@ class Console(QWidget):
 
 """ ----------------- Console App Settings ----------------- """
 
-class ConsoleAppSettings(QFrame):
+class ConsoleAppSettings(SettingsUI):
     def __init__(self,  config: ConsoleAppCfg, topicMap: TopicMap ):
         super().__init__()
         self.setWindowTitle("Console Settings")
@@ -144,6 +142,7 @@ class ConsoleAppSettings(QFrame):
             hbox.addLayout(self.consoleConfigStack)
             self.setLayout(hbox)
 
+
     def createConsoleCfg(self, consoleCfg: ConsoleCfg):
         new_consoleSettings = ConsoleSettings(consoleCfg)
         self.consoleList.addItem(consoleCfg.name)
@@ -159,7 +158,8 @@ class ConsoleAppSettings(QFrame):
         for i in range(self.consoleList.count()):
             stackWidget = self.consoleConfigStack.widget(i)
             if(isinstance(stackWidget, ConsoleSettings)):
-                stackWidget.updateConfig()
+                stackWidget.updateConfig() # Update Config for each console
+                self.config.consoleCfgs[i] = stackWidget.config # Apply to app config 
 
     def addConsole_handle(self, consoleCfg: ConsoleCfg):
         self.config.consoleCfgs.append(consoleCfg)
@@ -179,7 +179,7 @@ class ConsoleAppSettings(QFrame):
             self.addConsole_handle(consoleCfg)
 
   
-class ConsoleSettings(QFrame):
+class ConsoleSettings(SettingsUI):
     def __init__(self, config: ConsoleCfg):
         super().__init__()
         self.log = getmylogger(__name__)

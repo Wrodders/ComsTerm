@@ -7,11 +7,11 @@ import matplotlib.animation as animation
 plt.style.use('dark_background')
 
 from client.zmqQtBridge import ZmqBridgeQt
-from client.menus import DataSeriesTable, DataSeriesTableSettings
+from client.menus import DataSeriesTable, DataSeriesTableSettings, SettingsUI
 
 from common.logger import getmylogger
 from common.config import LinePlotCfg, ScatterPlotCfg, BarPlotCfg
-from common.config import PlotCfg, PlotAppCfg, PlotTypeMap, CfgBase, SinkCfg
+from common.config import PlotCfg, PlotAppCfg, PlotTypeMap
 
 
 from core.device import TopicMap
@@ -131,7 +131,7 @@ class LinePlot(BasePlot):
         return lines
 
 """ ----------------- Plot App Settings ----------------- """
-class PlotAppSettings(QFrame):
+class PlotAppSettings(SettingsUI):
     def __init__(self, config: PlotAppCfg,topicMap: TopicMap):
         super().__init__()
         self.setWindowTitle("Plot Settings")
@@ -186,13 +186,12 @@ class PlotAppSettings(QFrame):
             self.plotConfigStack.setCurrentIndex(self.plotList.count()-1) # Auto switch to new plot config
 
     def updateConfig(self):
-        # update settings with current plot configurations
+        # update config with current plot UI configurations
         for i in range(self.plotList.count()):
             stackWidget = self.plotConfigStack.widget(i)
             if(isinstance(stackWidget, PlotSettings)):
-                stackWidget.updateConfig()
-                if(isinstance(self.config, PlotAppCfg)):
-                    self.config.plotConfigs[i] = stackWidget.config
+                stackWidget.updateConfig() # Update Config for each plot settings
+                self.config.plotConfigs[i] = stackWidget.config # Apply to app config
 
     def addPlot_handle(self, plotCfg: PlotCfg):
        # Add a new plot configuration to the stacked layout
@@ -213,7 +212,7 @@ class PlotAppSettings(QFrame):
         for idx in range(len(self.config.plotConfigs)): # Add the new plot configurations
             self.addPlot_handle(self.config.plotConfigs[idx])
 
-class PlotSettings(QFrame):
+class PlotSettings(SettingsUI):
     def __init__(self, plotCfg: PlotCfg):
         super().__init__()
         self.log = getmylogger(__name__)
@@ -230,7 +229,6 @@ class PlotSettings(QFrame):
         self.maxSeries.setMaximumWidth(50)
         self.sampleBuffer = QLineEdit(str(self.config.sampleBufferLen))
         self.sampleBuffer.setMaximumWidth(50)
-
         # Config depending on plot type with default values
         self.linePlotSettings = LinePlotSettings(LinePlotCfg())
         self.scatterPlotSettings = ScatterPlotSettings(ScatterPlotCfg())
@@ -273,7 +271,9 @@ class PlotSettings(QFrame):
             stackWidget.updateConfig()
             self.config.typeCfg = stackWidget.config
 
-class LinePlotSettings(QFrame):
+     
+
+class LinePlotSettings(SettingsUI):
     def __init__(self, config: LinePlotCfg):
         super().__init__()
         self.config = config
@@ -293,7 +293,7 @@ class LinePlotSettings(QFrame):
     def updateConfig(self):
         self.config.yrange = (float(self.yMin.text()), float(self.yMax.text()))
 
-class ScatterPlotSettings(QFrame):
+class ScatterPlotSettings(SettingsUI):
     def __init__(self, config: ScatterPlotCfg):
         super().__init__()
         self.config = config
@@ -327,7 +327,7 @@ class ScatterPlotSettings(QFrame):
         self.config.xrange = (float(self.xMin.text()), float(self.xMax.text()))
         self.config.marker = self.marker.currentText()
 
-class BarPlotSettings(QFrame):
+class BarPlotSettings(SettingsUI):
     def __init__(self, config: BarPlotCfg):
         super().__init__()
         self.config = config

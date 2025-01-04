@@ -45,21 +45,22 @@ class App(QMainWindow):
     def launchSession(self):
         self.log.info("Launching Session")
         self.initMenu()
-        self.initUI()
-    def initUI(self):
-       # Lauch Apps
-        for cfg in self.config.appCfgs:
-            if(isinstance(cfg.typeCfg, PlotAppCfg)):
-                self.appWindows.append(PlotApp(cfg.typeCfg, self.config.topicMap))
-            elif(isinstance(cfg.typeCfg, ConsoleAppCfg)):
-                self.appWindows.append(ConsoleApp(cfg.typeCfg, self.config.topicMap))
-            elif(isinstance(cfg.typeCfg, ControllerCfg)):
-                self.appWindows.append(ControlsApp(cfg.typeCfg))
-            else:
-                self.log.error("Unknown App Type")
 
+        self.plotApp = PlotApp(self.config.plotAppCfg, self.config.topicMap)
+        self.appWindows.append(self.plotApp)
+        self.plotApp.show()
+
+        self.consoleApp = ConsoleApp(self.config.consoleAppCfg, self.config.topicMap)
+        self.appWindows.append(self.consoleApp)
+        self.consoleApp.show()
         
-       
+        self.controlsApp = ControlsApp(self.config.controllerAppCfg)
+        self.appWindows.append(self.controlsApp)
+        self.controlsApp.show()
+      
+
+        self.setCentralWidget(self.controlsApp)
+    
 
     def initMenu(self):
         # Menu Bar setup

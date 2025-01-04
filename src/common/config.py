@@ -5,19 +5,6 @@ from typing import List, Union
 from common.messages import TopicMap
 
 @dataclass
-class CfgBase():
-    def save(self, cfgFile: str):
-        raise NotImplementedError
-    
-    def populate(self, cfg_data: dict):
-        raise NotImplementedError
-    
-    def load(self, cfgFile: str):
-        with open(cfgFile, 'r') as f:
-            cfg_data = json.load(f)
-            self.populate(cfg_data)
-
-@dataclass
 class SinkCfg():
     protocol: tuple[str, ...] = field(default_factory=tuple)
     name: str = "Sink 0"
@@ -51,13 +38,14 @@ class PlotCfg(SinkCfg):
     maxPlotSeries: int = 8
 
 @dataclass
-class PlotAppCfg(CfgBase):
+class PlotAppCfg():
     plotConfigs : List[PlotCfg] = field(default_factory=lambda: [PlotCfg()])
     maxPlots: int = 4
 
-    def save(self, cfgFilePath: str):
-        with open(cfgFilePath, "w") as file:
-            json.dump(asdict(self), file,indent=4)
+    def load(self, cfgFile: str):
+        with open(cfgFile, 'r') as f:
+            cfg_data = json.load(f)
+            self.populate(cfg_data)
 
     def populate(self, cfg_data: dict):
         self.plotConfigs = list()
@@ -74,14 +62,15 @@ class ConsoleCfg(SinkCfg):
     name: str = "Console 0"
 
 @dataclass
-class ConsoleAppCfg(CfgBase):
+class ConsoleAppCfg():
     consoleCfgs : list[ConsoleCfg] = field(default_factory=lambda: [ConsoleCfg()])
     maxNumConsoles : int = 4
 
-    def save(self, cfgFile: str):
-        with open(cfgFile, 'w') as f:
-            json.dump(asdict(self), f, indent=4)
-    
+    def load(self, cfgFile: str):
+        with open(cfgFile, 'r') as f:
+            cfg_data = json.load(f)
+            self.populate(cfg_data)
+   
     def populate(self, cfg_data: dict):
         self.maxNumConsoles = cfg_data["maxNumConsoles"]
         for consoleCfg in cfg_data["consoleCfgs"]:
@@ -92,46 +81,54 @@ class ConsoleAppCfg(CfgBase):
 
 """ ----------------- Controls App Config ----------------- """
 @dataclass
-class ControllerCfg(CfgBase):
+class ControllerCfg():
     paramRegMapFile: str = "paramRegMap.csv"
 
-    def save(self, cfgFile: str):
-        with open(cfgFile, 'w') as f:
-            json.dump(asdict(self), f, indent=4)
-    
+    def load(self, cfgFile: str):
+        with open(cfgFile, 'r') as f:
+            cfg_data = json.load(f)
+            self.populate(cfg_data)
+
     def populate(self, cfg_data: dict):
         self.paramRegMapFile = cfg_data["paramRegMapFile"]
 
 
 """ ----------------- Main App Config ----------------- """
-
 AppTypeMap = {
     "PLOT" : PlotAppCfg,
     "CONSOLE" : ConsoleAppCfg,
     "CONTROL" : ControllerCfg
 }
-@dataclass
-class AppCfg():
-    appType : str = "PLOT"
-    typeCfg : Union[PlotAppCfg, ConsoleAppCfg, ControllerCfg] = field(default_factory=PlotAppCfg)
 
 @dataclass
-class SessionConfig(CfgBase): # Session Runtime Configuration
-    appCfgs : List[AppCfg] = field(default_factory=list) # list of app configurations
+class SessionConfig(): # Session Runtime Configuration
+    plotAppCfg : PlotAppCfg = field(default_factory=PlotAppCfg)
+    consoleAppCfg : ConsoleAppCfg = field(default_factory=ConsoleAppCfg)
+    controllerAppCfg : ControllerCfg = field(default_factory=ControllerCfg)
     topicMap : TopicMap = field(default_factory=TopicMap)
    
     def __post_init__(self):
         self.topicMap.loadTopicsFromCSV("devicePub.csv")
 
+    def load(self, cfgFile: str):
+        with open(cfgFile, 'r') as f:
+            cfg_data = json.load(f)
+            self.populate(cfg_data)
+
     def save(self, cfgFile: str):
         with open(cfgFile, 'w') as f:
-            cfg_data = {"appCfgs" : [asdict(appCfg) for appCfg in self.appCfgs]}
-            json.dump(cfg_data, f, indent=4)
+            sessionCfg_data = {
+                "plotApp": self.plotAppCfg,
+                "consoleApp": self.consoleAppCfg,
+                "controlsApp": self.controllerAppCfg
+            }
+            # Use custom encoder to serialize dataclasses properly
+            json.dump(sessionCfg_data, f, indent=4, default=lambda obj: obj.__dict__)
 
     def populate(self, cfg_data: dict):
-        for cfg in cfg_data["appCfgs"]:
-            if(cfg.get("appType") in [cfg.appType for cfg in self.appCfgs]):
-                continue # Skip duplicate app types
-            appType = cfg["appType"]
-            appCfgType = AppTypeMap[appType]
-            self.appCfgs.append(AppCfg(appType=appType, typeCfg=appCfgType(**cfg)))
+        self.plotAppCfg.populate(cfg_data["plotApp"])
+        self.consoleAppCfg.populate(cfg_data["consoleApp"])
+        self.controllerAppCfg.populate(cfg_data["controlsApp"])
+
+        
+           

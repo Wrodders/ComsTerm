@@ -10,7 +10,19 @@ from core.SimulatedDevice import SimInfo
 from core.ZmqDevice import ZmqInfo
 from common.zmqutils import Transport, Endpoint
 from common.messages import TopicMap, ParameterMap
-from common.config import SinkCfg
+
+
+
+class SettingsUI(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setFrameShadow(QFrame.Shadow.Raised)
+    def updateConfig(self):
+        raise NotImplementedError
+    
+
+
 
 
 class FileExplorer(QWidget):
