@@ -25,7 +25,7 @@ def ps4_joystick_handler(pipe):
 
             pygame.event.pump()  # Poll joystick events
             # Get joystick axes (e.g., left stick: axis 0 & 1, right stick: axis 2 & 3)
-            rx = round(joy.get_axis(2)*1.4,3)  # Right stick horizontal
+            rx = round(joy.get_axis(2)*3,3)  # Right stick horizontal
             ry = round(joy.get_axis(3)*0.6,3)  # Right stick horizontal
             if abs(rx) < 0.05 : 
                 rx = 0

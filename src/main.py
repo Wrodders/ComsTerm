@@ -12,14 +12,17 @@ from common.messages import TopicMap, ParameterMap
 from common.config import SessionConfig, PlotAppCfg, PlotCfg, AppTypeMap, ConsoleAppCfg, ControllerCfg
 
 from core.device import BaseDevice 
-from core.comsTerm import ComsTerm
+from core.commander import ZMQCommander
 
 from client.menus import FileExplorer
 from client.plot import  LinePlot, PlotApp
 from client.console import ConsoleAppSettings, Console, ConsoleApp
-from client.controller import ControlsApp
 from client.gui import AppSettingsDialog, SessionConfig, AppSettings
 from client.plot import PlotAppCfg, PlotAppSettings, PlotApp, PlotCfg
+from client.joystick import JoystickApp
+from client.paramTable import ParamTableApp
+
+
 
 
 class App(QMainWindow):
@@ -31,36 +34,36 @@ class App(QMainWindow):
         self.appWindows = list()
         # Load Config File if provided
         if(cfgFile != None):
-            self.log.info(f"Loading Config File: {cfgFile}")
+            self.log.info(f"Loading App Config File: {cfgFile}")
             self.config.load(cfgFile)
-           
         else:
-            self.log.info("No Config File Provided, Opening Settings")
+            self.log.info("No App Config File Provided, Opening Settings")
          
             diag = AppSettingsDialog(self.config) # Settings Menu with default config
             if(diag.exec() == True):
                 self.config = diag.settingsUI.config # Update Config with new settings
 
+        self.zmqCommander = ZMQCommander(self.config.controllerAppCfg.paramRegMapFile)
         self.launchSession()
 
     def launchSession(self):
         self.log.info("Launching Session")
         self.initMenu()
-
+        # load App Windows
         self.plotApp = PlotApp(self.config.plotAppCfg, self.config.topicMap)
         self.appWindows.append(self.plotApp)
         self.plotApp.show()
         self.consoleApp = ConsoleApp(self.config.consoleAppCfg, self.config.topicMap)
         self.appWindows.append(self.consoleApp)
         self.consoleApp.show()
-        
-        self.controlsApp = ControlsApp(self.config.controllerAppCfg)
-        self.appWindows.append(self.controlsApp)
-        self.controlsApp.show()
-      
+        self.joystickApp = JoystickApp(self.zmqCommander)
+        self.appWindows.append(self.joystickApp)
+        self.joystickApp.show()
+        self.paramTableApp = ParamTableApp(self.zmqCommander)
+        self.appWindows.append(self.paramTableApp)
+        self.paramTableApp.show()
 
-        self.setCentralWidget(self.controlsApp)
-    
+        self.setCentralWidget(self.paramTableApp)
 
     def initMenu(self):
         # Menu Bar setup
@@ -79,7 +82,6 @@ class App(QMainWindow):
         new_plot_action = QAction("New", self)
         new_plot_action.triggered.connect(self.newPlot)
         self.plotMenu.addAction(new_plot_action)
-
 
         self.consoleMenu = self.appMenu.addMenu("Console")
         new_console_action = QAction("New", self)

@@ -15,21 +15,21 @@ class Transport(Enum):
 class Endpoint(Enum):
     COMSTERM_MSG = "comsterm_msg"
     COMSTERM_CMD = "comsterm_cmd"
-    PI_MSG = "raspberrypi.local:5555"
-    PI_CMD = "raspberrypi.local:5556"
+    BOT_MSG = "bot.local:5555"
+    BOT_CMD = "bot.local:5556"
     PC_MSG = "Rodrigos-MacBook-Air.local:5555"
     PC_CMD = "Rodrigos-MacBook-Air.local:5556"
     BB_MSG = "buildbox.local:5555"
     BB_CMD = "buildbox.local:5556"
     DBOT_MSG = "dbot.local:5555"
     DBOT_CMD = "dbot.local:5556"
-    LOCAL_MSG = "*:5555"
-    LOCAL_CMD = "*:5556"
+    LOCAL_MSG = "localhost:5555"
+    LOCAL_CMD = "localhost:5556"
 
 def buildAddress(transport: Transport, endpoint: Endpoint) -> str:
     return f"{transport.value}{endpoint.value}"
 
-class ZmqPub:
+class ZmqPub():
     def __init__(self, transport: Transport, endpoint: Endpoint):
         self.log = getmylogger(__name__)
         self.socketAddress = buildAddress(transport, endpoint)
@@ -47,7 +47,7 @@ class ZmqPub:
         self.socket.close()
         self.log.debug(f"Closed ZMQ PUB socket bound to: {self.socketAddress}")
 
-class ZmqSub:
+class ZmqSub():
     def __init__(self, transport: Transport, endpoint: Endpoint):
         self.log = getmylogger(__name__)
         self.socketAddress = buildAddress(transport, endpoint)

@@ -11,6 +11,45 @@ from core.ZmqDevice import ZmqInfo
 from common.zmqutils import Transport, Endpoint
 from common.messages import TopicMap, ParameterMap
 
+from PyQt6.QtWidgets import QProgressBar
+from PyQt6.QtCore import QTimer, pyqtSignal
+
+class ProgressBar(QProgressBar):
+    """ Custom progress bar with a configurable timeout. """
+    timeoutSig = pyqtSignal()  
+
+    def __init__(self, timeout: int = 500):  
+        """
+        :param timeout: Total duration in milliseconds for the progress bar to complete.
+        """
+        super().__init__()
+
+        self.timeout = timeout  # Total time in ms
+        self.update_interval = 100  # Update every 10ms
+        self.increment = max(1, int(100 / (self.timeout / self.update_interval)))  
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.updateBar)
+
+        self.setValue(0)
+        self.setMaximum(100)
+
+    def start(self):
+        """ Starts the progress bar animation and timeout. """
+        self.setValue(0)
+        self.timer.start(self.update_interval)
+
+    def updateBar(self):
+        """ Updates the progress bar value. """
+        if self.value() < 100:
+            self.setValue(self.value() + self.increment)
+        else:
+            self.timer.stop()
+            self.timeoutSig.emit()  # Emit signal when done
+            self.setValue(0)  # Reset for future use
+
+
+    
 
 
 class SettingsUI(QFrame):
@@ -21,10 +60,6 @@ class SettingsUI(QFrame):
     def updateConfig(self):
         raise NotImplementedError
     
-
-
-
-
 class FileExplorer(QWidget):
     def __init__(self, name: str):
         super().__init__()

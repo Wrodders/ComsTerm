@@ -2,7 +2,7 @@
     "workbench.iconTheme": "material-icon-theme",
     "workbench.colorTheme": "Atom One Dark",
     "window.autoDetectColorScheme": true,
-    "workbench.preferredDarkColorTheme": "Atom One Dark",
+    "workbench.preferredDarkColorTheme": "Tomorrow Night Blue",
     "workbench.preferredLightColorTheme": "Solarized Light",
     "python.analysis.typeCheckingMode": "basic",
     "cSpell.ignoreWords": [
@@ -30,6 +30,7 @@
         "outputconsole",
         "packetazation",
         "PISTREAM",
+        "pubid",
         "QLCD",
         "qtagg",
         "requeiremtes",

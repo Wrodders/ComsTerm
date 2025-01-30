@@ -25,7 +25,7 @@ Device2  | SUB |    udp://PCIp:port | Proxy PUB |
 @dataclass
 class ZmqInfo(DeviceInfo):
     clientSub_transport : Transport = Transport.TCP
-    clientSub_endpoint : Endpoint = Endpoint.PI_MSG
+    clientSub_endpoint : Endpoint = Endpoint.BOT_MSG
     clientCmd_transport : Transport = Transport.IPC
     clientCmd_endpoint : Endpoint = Endpoint.COMSTERM_CMD
 

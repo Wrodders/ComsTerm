@@ -13,11 +13,12 @@ class ZmqBridgeQt(QObject):
     def __init__(self):
         super().__init__()
         self.log = getmylogger(__name__)
-        self.subscriber = ZmqSub(Transport.IPC, Endpoint.COMSTERM_MSG)
+        self.subscriber = ZmqSub(Transport.TCP, Endpoint.BOT_MSG)
         self.workerIO = Worker(self._run)
+        self.subscriber.connect()
     def _run(self):
         self.log.info(f"Started ZmqBridge I/O Thread")
-        self.subscriber.connect()
+        
         while not self.workerIO.stopEvent.is_set():
             try:
                 topic, msg = self.subscriber.receive()

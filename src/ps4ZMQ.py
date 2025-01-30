@@ -8,9 +8,9 @@ def main():
     pygame.init()
     pygame.joystick.init()
 
-    cmdr = ZMQCommander()
+    cmdr = ZMQCommander(paramRegMapFile="paramRegMap.csv")
     cmdr.publisher = ZmqPub(endpoint=Endpoint.LOCAL_CMD, transport=Transport.TCP)
-    cmdr.publisher.bind()
+    cmdr.publisher.pub.connect()
 
     # Ensure at least one joystick is connected
     if pygame.joystick.get_count() == 0:
@@ -35,8 +35,8 @@ def main():
                 rx = 0
             if (abs(ry) < 0.1):
                 ry =0
-            cmdr.sendSetCmd("AT",str(rx))
-            cmdr.sendSetCmd("VT",str(ry))
+            cmdr.pushSetCmd("AT",str(rx))
+            cmdr.pushSetCmd("VT",str(ry))
             time.sleep(0.1)
 
     except KeyboardInterrupt:

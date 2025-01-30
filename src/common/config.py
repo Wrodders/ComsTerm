@@ -82,15 +82,15 @@ class ConsoleAppCfg():
 """ ----------------- Controls App Config ----------------- """
 @dataclass
 class ControllerCfg():
-    paramRegMapFile: str = "paramRegMap.csv"
+    paramRegMapFile: str = "paramRegMap.json"
 
     def load(self, cfgFile: str):
         with open(cfgFile, 'r') as f:
-            cfg_data = json.load(f)
-            self.populate(cfg_data)
+            cfg_data = json.load(f) 
+            self.populate(cfg_data) 
 
     def populate(self, cfg_data: dict):
-        self.paramRegMapFile = cfg_data["paramRegMapFile"]
+        self.paramRegMapFile = cfg_data["paramRegMapFile"] # stores session parameter registry map file path
 
 
 """ ----------------- Main App Config ----------------- """

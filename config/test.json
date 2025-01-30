@@ -3,56 +3,84 @@
         "plotConfigs": [
             {
                 "protocol": [
-                    "STATE/LW",
-                    "STATE/RW",
-                    "STATE/UL",
-                    "STATE/UR",
-                    "STATE/TL",
-                    "STATE/TR"
-                ],
-                "name": "Motor",
-                "sampleBufferLen": 100,
-                "plotType": "LINE",
-                "typeCfg": {
-                    "yrange": [
-                        -8.0,
-                        8.0
-                    ]
-                },
-                "maxPlotSeries": 8
-            },
-            {
-                "protocol": [
                     "STATE/PITCH",
-                    "STATE/UB",
-                    "STATE/UV",
-                    "STATE/LINVEL"
+                    "STATE/ROLL",
+                    "STATE/BALANCE_ANGLE"
                 ],
-                "name": "Balance",
+                "name": "IMU",
                 "sampleBufferLen": 100,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -45.0,
-                        45.0
+                        -20.0,
+                        20.0
                     ]
                 },
                 "maxPlotSeries": 8
             },
             {
                 "protocol": [
-                    "STATE/LINVEL",
-                    "STATE/ANGVEL",
-                    "STATE/UA",
-                    "STATE/UV"
+                    "STATE/LEFT_SHAFT_RPS",
+                    "STATE/LEFT_WHEEL_TRGT",
+                    "STATE/LEFT_VOLTAGE"
                 ],
-                "name": "Sink 0",
+                "name": "LEFT MOTOR",
                 "sampleBufferLen": 100,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -4.0,
-                        4.0
+                        -6.0,
+                        6.0
+                    ]
+                },
+                "maxPlotSeries": 8
+            },
+            {
+                "protocol": [
+                    "STATE/RIGHT_SHAFT_RPS",
+                    "STATE/RIGHT_WHEEL_TRGT",
+                    "STATE/RIGHT_VOLTAGE"
+                ],
+                "name": "RIGHT MOTOR",
+                "sampleBufferLen": 100,
+                "plotType": "LINE",
+                "typeCfg": {
+                    "yrange": [
+                        -6.0,
+                        6.0
+                    ]
+                },
+                "maxPlotSeries": 8
+            },
+            {
+                "protocol": [
+                    "STATE/LINEAR_VEL",
+                    "STATE/LIN_VEL_TRGT"
+                ],
+                "name": "LINEAR VELOCITY",
+                "sampleBufferLen": 100,
+                "plotType": "LINE",
+                "typeCfg": {
+                    "yrange": [
+                        -1.0,
+                        1.0
+                    ]
+                },
+                "maxPlotSeries": 8
+            },
+            {
+                "protocol": [
+                    "STATE/ANGULAR_VEL",
+                    "STATE/ANG_VEL_TRGT",
+                    "STATE/STEER_DIFF"
+                ],
+                "name": "ANGULAR VELOCITY",
+                "sampleBufferLen": 100,
+                "plotType": "LINE",
+                "typeCfg": {
+                    "yrange": [
+                        -3.0,
+                        3.0
                     ]
                 },
                 "maxPlotSeries": 8
@@ -63,7 +91,12 @@
     "consoleApp": {
         "consoleCfgs": [
             {
-                "protocol": ["ERROR/", "INFO/", "DEBUG/", "CMD_RET/"],
+                "protocol": [
+                    "CMD_RET",
+                    "ERROR",
+                    "INFO",
+                    "DEBUG"
+                ],
                 "name": "Console 0",
                 "sampleBufferLen": 100
             }
@@ -71,6 +104,6 @@
         "maxNumConsoles": 4
     },
     "controlsApp": {
-        "paramRegMapFile": "paramRegMap.csv"
+        "paramRegMapFile": "paramRegMap.json"
     }
 }

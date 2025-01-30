@@ -1,23 +1,23 @@
 Register,Address,Access,Data Type,Description
 IDENT,a,R,str, Device Id
-MD,b,W,float,Mode
-LT,c,W,float,Target Left  Wheel RPM
-LP,d,W,float,Left Wheel Speed KP
-LI,e,W,float,Left Wheel Speed KI
-RT,f,W,float,Target Right Wheel RPM
-RP,g,W,float,Right Wheel Speed KP
-RI,h,W,float,Right Wheel Speed KI
-BT,i,W,float,Balance Trgt
-BP,j,W,float,Balance KP
-BI,k,W,float,Balance KI
-BD,l,W,float,Balance KD
-VT,m,W,float,Target LinVel mps
-VP,n,W,float,LinVel KP
-VI,o,W,float,LinVel KI
-VD,p,W,float,LinVel KD
-VA,q,W,float,LinVel Alpha
-AT,r,W,float,Steer T
-AP,s,W,float,Steer KP
-AI,t,W,float,Steer KI
-AD,u,W,float,Steer KD
-AA,v,W,float,Steer Alpha
+MODE,b,W,float,Mode
+LTRGT,c,W,float,Target Left  Wheel RPM
+LKP,d,W,float,Left Wheel Speed KP
+LKI,e,W,float,Left Wheel Speed KI
+RTRGT,f,W,float,Target Right Wheel RPM
+RKP,g,W,float,Right Wheel Speed KP
+RKI,h,W,float,Right Wheel Speed KI
+BTRGT,i,W,float,Balance Trgt
+BKP,j,W,float,Balance KP
+BKI,k,W,float,Balance KI
+BKD,l,W,float,Balance KD
+VTRGT,m,W,float,Target LinVel mps
+VKP,n,W,float,LinVel KP
+VKI,o,W,float,LinVel KI
+VKD,p,W,float,LinVel KD
+VALPHA,q,W,float,LinVel Alpha
+ATRGT,r,W,float,Steer T
+AKP,s,W,float,Steer KP
+AKI,t,W,float,Steer KI
+AKD,u,W,float,Steer KD
+AALPHA,v,W,float,Steer Alpha
