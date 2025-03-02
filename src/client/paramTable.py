@@ -30,9 +30,15 @@ class ParamTableApp(QFrame):
             # Connect App Signals to Commander
             for paramUI in paramTable.paramTable:
                 if isinstance(paramUI, ParamRegUI):
-                    paramUI.get_btn.clicked.connect(partial(self.cmdr.sendGetCmd, nodeID=node_name, paramName=paramUI.label.text()))
-                    paramUI.set_btn.clicked.connect(partial(self.cmdr.sendSetCmd, nodeID=node_name, paramName=paramUI.label.text(), value=paramUI.value_entry.text()))
-            
+                    paramUI.get_btn.clicked.connect(
+                        partial(self.cmdr.sendGetCmd, nodeID=node_name, paramName=paramUI.label.text()))
+                    paramUI.set_btn.clicked.connect(
+                        lambda checked, pui=paramUI: self.cmdr.sendSetCmd(
+                            nodeID=self.tabs.tabText(self.tabs.currentIndex()),
+                            paramName=pui.label.text(),
+                            value=pui.value_entry.text()
+                        )
+                    )
         vbox = QVBoxLayout()
         vbox.addWidget(self.tabs)
         self.setLayout(vbox)

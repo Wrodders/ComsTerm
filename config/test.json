@@ -3,9 +3,9 @@
         "plotConfigs": [
             {
                 "protocol": [
-                    "STATE/PITCH",
-                    "STATE/ROLL",
-                    "STATE/BALANCE_ANGLE"
+                    "TELEM/TWSB/PITCH",
+                    "TELEM/TWSB/ROLL",
+                    "TELEM/TWSB/BALANCE_ANGLE"
                 ],
                 "name": "IMU",
                 "sampleBufferLen": 100,
@@ -20,9 +20,9 @@
             },
             {
                 "protocol": [
-                    "STATE/LEFT_SHAFT_RPS",
-                    "STATE/LEFT_WHEEL_TRGT",
-                    "STATE/LEFT_VOLTAGE"
+                    "TELEM/TWSB/LEFT_SHAFT_RPS",
+                    "TELEM/TWSB/LEFT_WHEEL_TRGT",
+                    "TELEM/TWSB/LEFT_VOLTAGE"
                 ],
                 "name": "LEFT MOTOR",
                 "sampleBufferLen": 100,
@@ -37,9 +37,9 @@
             },
             {
                 "protocol": [
-                    "STATE/RIGHT_SHAFT_RPS",
-                    "STATE/RIGHT_WHEEL_TRGT",
-                    "STATE/RIGHT_VOLTAGE"
+                    "TELEM/TWSB/RIGHT_SHAFT_RPS",
+                    "TELEM/TWSB/RIGHT_WHEEL_TRGT",
+                    "TELEM/TWSB/RIGHT_VOLTAGE"
                 ],
                 "name": "RIGHT MOTOR",
                 "sampleBufferLen": 100,
@@ -54,8 +54,8 @@
             },
             {
                 "protocol": [
-                    "STATE/LINEAR_VEL",
-                    "STATE/LIN_VEL_TRGT"
+                    "TELEM/TWSB/LINEAR_VEL",
+                    "TELEM/TWSB/LIN_VEL_TRGT"
                 ],
                 "name": "LINEAR VELOCITY",
                 "sampleBufferLen": 100,
@@ -70,9 +70,9 @@
             },
             {
                 "protocol": [
-                    "STATE/ANGULAR_VEL",
-                    "STATE/ANG_VEL_TRGT",
-                    "STATE/STEER_DIFF"
+                    "TELEM/TWSB/ANGULAR_VEL",
+                    "TELEM/TWSB/ANG_VEL_TRGT",
+                    "TELEM/TWSB/STEER_DIFF"
                 ],
                 "name": "ANGULAR VELOCITY",
                 "sampleBufferLen": 100,
@@ -92,10 +92,11 @@
         "consoleCfgs": [
             {
                 "protocol": [
-                    "CMD_RET",
-                    "ERROR",
-                    "INFO",
-                    "DEBUG"
+                    "CMD_RET/TWSB",
+                    "CMD_RET/VISION",
+                    "ERROR/TWSB",
+                    "INFO/TWSB",
+                    "DEBUG/TWSB"
                 ],
                 "name": "Console 0",
                 "sampleBufferLen": 100
@@ -104,6 +105,6 @@
         "maxNumConsoles": 4
     },
     "controlsApp": {
-        "paramRegMapFile": "paramRegMap.json"
+        "paramRegMapFile": "robotConfig.json"
     }
 }

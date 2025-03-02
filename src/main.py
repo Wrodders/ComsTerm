@@ -11,7 +11,6 @@ from common.logger import getmylogger
 from common.messages import TopicMap, ParameterMap
 from common.config import SessionConfig, PlotAppCfg, PlotCfg, AppTypeMap, ConsoleAppCfg, ControllerCfg
 
-from core.device import BaseDevice 
 from core.commander import ZMQCommander
 
 from client.menus import FileExplorer

@@ -40,6 +40,10 @@ class ZmqPub():
         self.socket.bind(self.socketAddress)
         self.log.debug(f"Bound ZMQ PUB socket to {self.socketAddress}")
 
+    def connect(self):
+        self.socket.connect(self.socketAddress)
+        self.log.debug(f"Connected ZMQ PUB socket to {self.socketAddress}")
+
     def send(self, topic: str, data: str):
         self.socket.send_multipart([topic.encode(), data.encode()])
 
@@ -62,15 +66,15 @@ class ZmqSub():
         self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
         self.log.debug(f"Subscribed to topic: {topic}")
 
-    def receive(self) -> tuple[str, str]:
+    def receive(self) -> tuple[str, str, str]:
         try:
-            topic, message = self.socket.recv_multipart()
-            return topic.decode(), message.decode()
+            topic, message, timestamp = self.socket.recv_multipart()
+            return topic.decode(), message.decode(), timestamp.decode()
         except zmq.Again:
-            return "", ""
+            return "", "", ""
         except Exception as e:
             self.log.error(f"Error receiving message: {e}")
-            return "", ""
+            return "", "", ""
 
     def close(self):
         self.socket.close()
@@ -112,7 +116,7 @@ def main():
         print("Subscriber is running. Receiving messages (Ctrl+C to exit).")
         try:
             while True:
-                topic, message = subscriber.receive()
+                topic, message,_ = subscriber.receive()
                 if topic and message:
                     print(f"{topic}: {message}")
         except KeyboardInterrupt:

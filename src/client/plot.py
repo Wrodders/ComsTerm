@@ -14,7 +14,7 @@ from common.config import LinePlotCfg, ScatterPlotCfg, BarPlotCfg
 from common.config import PlotCfg, PlotAppCfg, PlotTypeMap
 
 
-from core.device import TopicMap
+from common.messages import TopicMap
 
 """ ----------------- Plot App ----------------- """
 class PlotApp(QFrame):
@@ -45,7 +45,7 @@ class PlotApp(QFrame):
 
     def newPlot(self, plotCfg: PlotCfg):
         if plotCfg.plotType == "LINE":
-            plot = LinePlot(plotCfg)
+            plot = LinePlot(topicMap=self.topicMap, config=plotCfg)
         else :
             raise NotImplementedError("Plot Type not implemented")
 
@@ -56,15 +56,15 @@ class PlotApp(QFrame):
         pass #Callback for closing a plot
 
 class BasePlot(QFrame):
+    
     """Base class for plotting."""
-    def __init__(self):
+    def __init__(self, topicMap:TopicMap):
         """Constructor method for BasePlot class."""
         super().__init__()
         self.config = PlotCfg()
         self.log = getmylogger(__name__)
-        self.zmqBridge = ZmqBridgeQt() 
+        self.zmqBridge = ZmqBridgeQt(topicMap=topicMap) 
         self.zmqBridge.msgSig.connect(self._updateData)
-        self.zmqBridge.workerIO._begin()
 
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[str, str]):
@@ -76,15 +76,17 @@ class BasePlot(QFrame):
 
 class LinePlot(BasePlot):
     """Class for line plotting."""
-    def __init__(self, config: PlotCfg):
+    def __init__(self, topicMap: TopicMap, config: PlotCfg):
         """Constructor method for LinePlot class."""
-        super().__init__()  
+        super().__init__(topicMap=topicMap)  
         if(isinstance(config.typeCfg, LinePlotCfg)):
             self.config = config
 
         self.dataSet = dict()
         self.lines = list()
         self.initUI()
+        self.zmqBridge.registerSubscriptions(self.config.protocol)
+        self.zmqBridge.workerIO._begin()
         self.setupPlot()
 
     def setupPlot(self):
@@ -92,7 +94,6 @@ class LinePlot(BasePlot):
         if(isinstance(self.config.typeCfg, LinePlotCfg)):
             self.ax.set_ylim(self.config.typeCfg.yrange) 
             for label in self.config.protocol:
-                self.zmqBridge.subscriber.addTopicSub(label)
                 self.dataSet[label] = [0] * self.config.sampleBufferLen  # zero out data values array
                 line, = self.ax.plot(self.xs, self.dataSet[label], label=label )  # create a line on the plot
                 self.lines.append(line)

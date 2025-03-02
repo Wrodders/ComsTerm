@@ -7,18 +7,18 @@ class ZMQCommander():
     def __init__(self, paramRegMapFile:str):
         self.paramRegMap = ParameterMap()
         self.paramRegMap.loadParametersFromJSON(paramRegMapFile)
-        self.publisher = ZmqPub(endpoint=Endpoint.COMSTERM_CMD, transport=Transport.IPC)
-        self.publisher.bind() # Bind Command Publisher
+        self.publisher = ZmqPub(endpoint=Endpoint.BOT_CMD, transport=Transport.TCP)
+        self.publisher.connect()
         self.log = getmylogger(__name__)
 
     def sendGetCmd(self,nodeID:str,  paramName :str) -> bool:
         param = self.paramRegMap.getParameterByName(nodeID,paramName)
         if(isinstance(param, Parameter)):
-            paramId = chr(param.address + ord('a')) # encode as ascii
+            paramId = chr(param.address + ord('A')) # encode as ascii
             # SOF | TYPE | ID | DATA(0)| EOF
-            packet = ("<" + "a" + paramId).encode() + b'\n' 
+            packet = ("<" + "A" + paramId).encode() + b'\n' 
             self.publisher.socket.send_multipart([nodeID.encode(), packet])
-            self.log.debug(f"Sent {packet} to {nodeID}")
+            self.log.debug(F"{nodeID} {packet}")
             return True
         else:
             return False
@@ -26,11 +26,11 @@ class ZMQCommander():
                     # SOF | TYPE | ID | DATA(0)| EOF
         param = self.paramRegMap.getParameterByName(nodeID,paramName)
         if(isinstance(param, Parameter)):      
-            paramId = chr(param.address + ord('a')) # encode as ascii
+            paramId = chr(param.address + ord('A')) # encode as ascii
             # SOF | ID | TYPE | DATA(0)| EOF
-            packet = ("<" + "b" + str(paramId) + str(value)).encode() + b'\n'
+            packet = ("<" + "B" + str(paramId) + str(value)).encode() + b'\n'
             self.publisher.socket.send_multipart([nodeID.encode(), packet])
-            self.log.debug(f"Sent {packet} to {nodeID}")
+            self.log.debug(F"{nodeID} {packet}")
             return True
         else:
             return False

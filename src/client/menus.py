@@ -4,10 +4,7 @@ from PyQt6.QtWidgets import *
 
 from common.utils import scanUSB
 
-from core.device import Devices, DeviceInfo
-from core.SerialDevice import SerialInfo
-from core.SimulatedDevice import SimInfo
-from core.ZmqDevice import ZmqInfo
+
 from common.zmqutils import Transport, Endpoint
 from common.messages import TopicMap, ParameterMap
 
@@ -88,7 +85,7 @@ class DataSeriesTableSettings(QFrame):
         self.pubMap = pubMap
         self.grid = QGridLayout()
         self.topicCB = QComboBox()
-        self.topicCB.addItems(self.pubMap.getTopicNames())
+        self.topicCB.addItems(self.pubMap.get_topic_names())
         self.topicCB.currentIndexChanged.connect(self.updateArgComboBox)
         self.addSeriesBtn = QPushButton("Add Series")
         self.removeSeriesBtn = QPushButton("Remove Series")
@@ -106,7 +103,7 @@ class DataSeriesTableSettings(QFrame):
     def updateArgComboBox(self):
         """Update argument combo box based on the selected topic."""
         topicName = self.topicCB.currentText()
-        _, topicArgs = self.pubMap.getTopicFormat(topicName)
+        _, topicArgs = self.pubMap.get_topic_format(topicName)
         self.argCb.clear()
         self.argCb.addItems(topicArgs)
 

@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
 import csv, json
+from typing import Optional, Tuple
 
 ''' 
 MsgFrame: Represents the raw serialized msg from a device. 
@@ -32,37 +33,49 @@ class MsgFrame():
         ID = str(packet[1])
         data = packet[2:]
         return cls(ID=ID, data=data)
-
 @dataclass
 class Parameter:
-    name: str = ""          # Parameter Register
-    address: int = 0         # Parameter Address byte
-    access: str = ""          # Access type (R/W)
-    format: str = ""          # Data Type
-    description: str = ""     # Tooltip Description
+    name: str = ""          
+    address: int = 0        # We'll map the JSON "id" field here
+    access: str = ""        
+    format: str = ""        
+    description: str = ""   
 
 @dataclass
 class ParameterMap:
     nodes: Dict[str, Dict[str, Parameter]] = field(default_factory=dict)
-    address_index: Dict[str, Dict[str, Parameter]] = field(default_factory=dict)
+    parameter_id_map: Dict[str, Dict[int, Parameter]] = field(default_factory=dict)
+    
     def loadParametersFromJSON(self, filename: str):
         """Load parameters from a JSON file."""
         with open(filename, mode='r') as file:
             data = json.load(file)
             for node_name, node_data in data.items():
+                # Ensure the dictionaries for this node exist.
+                if node_name not in self.nodes:
+                    self.nodes[node_name] = {}
+                if node_name not in self.parameter_id_map: # note this overwerites duplciates
+                    self.parameter_id_map[node_name] = {}
+                    
                 for parameter in node_data.get('parameters', []):
-                        if node_name not in self.nodes:
-                            self.nodes[node_name] = {} # Create client if it doesn't exist
-                        if node_name not in self.address_index:
-                            self.address_index[node_name] = {} # Create client if it doesn't exist
-                        self.nodes[node_name][parameter['name']] = Parameter(**parameter) # Add parameter to client
-                        self.address_index[node_name][parameter['address']] = Parameter(**parameter) # Add parameter to client
+                    # Map the "id" from JSON to "address" in our Parameter instance.
+                    p = Parameter(
+                        name=parameter.get('name', ''),
+                        address=parameter.get('id', 0),
+                        access=parameter.get('access', ''),
+                        format=parameter.get('format', ''),
+                        description=parameter.get('description', '')
+                    )
+                    # Store by name
+                    self.nodes[node_name][parameter['name']] = p
+                    # Store by address (using the JSON "id")
+                    self.parameter_id_map[node_name][parameter['id']] = p
 
-    def getParameterByAddress(self, client_name: str, address: str) ->Parameter | None:
+    def getParameterByAddress(self, client_name: str, address: int) -> Parameter | None:
         """Get parameter by client and address."""
-        return self.address_index.get(client_name, {}).get(address)
+        return self.parameter_id_map.get(client_name, {}).get(address)
 
-    def getParameterByName(self, client_name: str, reg_name: str) ->Parameter | None:
+    def getParameterByName(self, client_name: str, reg_name: str) -> Parameter | None:
         """Get parameter by client and register name."""
         return self.nodes.get(client_name, {}).get(reg_name)
 
@@ -73,11 +86,10 @@ class ParameterMap:
     def getAllParameters(self) -> Dict[str, Dict[str, Parameter]]:
         """Get a list of all parameters across all clients."""
         return self.nodes
-    
-    def getNodesNames(self) -> List[str]:
-        # Get all client names
-        return list(self.nodes.keys())
 
+    def getNodesNames(self) -> List[str]:
+        """Get all client (node) names."""
+        return list(self.nodes.keys())
         
 """ 
 Topics: Devices Publish Data over topics. 
@@ -86,58 +98,65 @@ Topics: Devices Publish Data over topics.
 """
 @dataclass
 class Topic:
-    ID : str = "" # Topics ID
-    name : str = "" # Topics Name
-    args: List[str] = field(default_factory=list)
-    delim : str = ":" # Data Argument Delimiter
-    nArgs : int = 0 # Number of Arguments in Topics Data
+    ID: str = ""  # Topic ID
+    name: str = ""  # Topic Name
+    args: List[str] = field(default_factory=list)  # Argument list
+    delim: str = ":"  # Delimiter
+    format: str = ""  # Data format
+    nArgs: int = 0  # Number of arguments
 
 @dataclass
 class TopicMap:
     topics: Dict[str, Topic] = field(default_factory=dict)
-    namesToIds: Dict[str, str] = field(default_factory=dict)
-    numTopics = int()
+    names_to_ids: Dict[str, str] = field(default_factory=dict)
 
-    def register(self, topicName: str, topicID:str, topicArgs: List[str], delim: str):
-        """Register a new topic"""
-        numArgs = len(topicArgs) if delim else 0
-        topic = Topic(ID=topicID, name=topicName, args=topicArgs, delim=delim, nArgs=numArgs)
-        self.numTopics += 1
-        self.topics[topicID] = topic
-        self.namesToIds[topicName] = topicID
+    def register(self, topic_name: str, topic_id: str, topic_args: List[str], delim: str):
+        """Register a new topic."""
+        topic = Topic(ID=topic_id, name=topic_name, args=topic_args, delim=delim, nArgs=len(topic_args) if delim else 0)
+        self.topics[topic_id] = topic
+        self.names_to_ids[topic_name] = topic_id
 
-    def loadTopicsFromCSV(self, filename: str):
-        """Load topics from a CSV file"""
-        with open(filename, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                topicName = row['PubName']
-                topicID = chr((int(row['pubid']) + ord('a')))
-                topicArgs = [arg  for arg in row['format'].split(':')]  # Split format string into list
-                delim = row['delim']
-                self.register(topicName,topicID, topicArgs, delim)
+    def load_topics_from_json(self, filename: str):
+        """Load topics from a JSON file."""
+        with open(filename, 'r') as file:
+            data = json.load(file)
+            for node_name, node_data in data.items():
+                for publisher in node_data.get('publishers', []):
+                    args = publisher.get('args', [])
+                    
+                    # Ensure args is a list
+                    if isinstance(args, str):
+                        args = args.split(", ")
 
-    def getTopicByID(self, topic_id: str) -> Topic | None:
-        """Get topic by ID"""
-        return self.topics.get(topic_id)
-    
-    def getTopicByName(self, name: str) -> Topic | None:
-        """Get topic by name"""
-        topicId = self.namesToIds.get(name)
-        if topicId:
-            return self.topics[topicId]
-        return None
+                    topic = Topic(
+                        ID=str(publisher.get('id', "")),
+                        name=f"{publisher.get('name', '')}/{node_name}",
+                        args=args,
+                        delim=":",  # Default delimiter
+                        format=publisher.get('format', ''),
+                        nArgs=len(args)
+                    )
 
-    def getTopicFormat(self, name: str) -> tuple[str, list]:
-        topicId= self.namesToIds.get(name)
-        if topicId:
-            return (self.topics[topicId].delim, self.topics[topicId].args)
-        else:
-            return (str(), list())
-        
-    def getTopicNames(self) -> List[str]:
-        return list(set([topic.name for topic in self.topics.values()]))
-    
+                    self.topics[topic.ID] = topic
+                    self.names_to_ids[topic.name] = topic.ID
 
-    def getTopics(self) -> List[Topic]:
-        return list(self.topics.values())
+        self.print_topics()
+
+    def get_topic_by_name(self, name: str) -> Optional[Topic]:
+        """Get topic by name."""
+        topic_id = self.names_to_ids.get(name)
+        return self.topics.get(topic_id) if topic_id else None
+
+    def get_topic_format(self, name: str) -> Tuple[Optional[str], Optional[List[str]]]:
+        """Get the format of a topic."""
+        topic = self.get_topic_by_name(name)
+        return (topic.delim, topic.args) if topic else (None, None)
+
+    def get_topic_names(self) -> List[str]:
+        """Get all topic names."""
+        return list(self.names_to_ids.keys())
+
+    def print_topics(self):
+        """Print all registered topics."""
+        for topic in self.topics.values():
+            print(f"Topic: {topic.name} | ID: {topic.ID} | Args: {topic.args} | Format: {topic.format} | nArgs: {topic.nArgs}")

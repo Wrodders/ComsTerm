@@ -108,7 +108,7 @@ class SessionConfig(): # Session Runtime Configuration
     topicMap : TopicMap = field(default_factory=TopicMap)
    
     def __post_init__(self):
-        self.topicMap.loadTopicsFromCSV("devicePub.csv")
+        self.topicMap.load_topics_from_json("robotConfig.json")
 
     def load(self, cfgFile: str):
         with open(cfgFile, 'r') as f:

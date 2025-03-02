@@ -39,7 +39,7 @@ class ConsoleApp(QFrame):
         grid.addWidget(self.clear_PB, 2, 0, 1, 1)
 
     def newConsole(self, consoleCfg: ConsoleCfg):
-        console = Console(topics=consoleCfg.protocol, name=consoleCfg.name)
+        console = Console(topicMap=self.topicMap, subscritions=consoleCfg.protocol, name=consoleCfg.name)
         self.consoles.append(console)
         self.tabs.addTab(console, console.name)
 
@@ -60,15 +60,16 @@ class ConsoleApp(QFrame):
             print("Settings")
 
 class Console(QWidget):
-    def __init__(self, topics: tuple[str, ...], name: str = "Console"):
+    def __init__(self, topicMap: TopicMap,  subscritions: tuple[str, ...], name: str = "Console"):
         super().__init__()
         self.log = getmylogger(__name__)
         self.name = name
-        self.topics = topics
+        self.topicMap = topicMap
+        self.topics = subscritions
 
         self.initUI()
-        self.zmqBridge = ZmqBridgeQt() 
-        [self.zmqBridge.subscriber.addTopicSub(t) for t in self.topics]
+        self.zmqBridge = ZmqBridgeQt(topicMap=self.topicMap)
+        self.zmqBridge.registerSubscriptions(self.topics)
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
                
@@ -96,12 +97,11 @@ class Console(QWidget):
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[str, str]):
         topic, data = msg
-        if(topic in self.topics):
-            if(isinstance(self.consoleText.document, QTextEdit)):
-                if self.consoleText.document().lineCount() > 200:
-                    self.consoleText.clear()
+        if(isinstance(self.consoleText.document, QTextEdit)):
+            if self.consoleText.document().lineCount() > 200:
+                self.consoleText.clear()
 
-            self.consoleText.append(topic +"    "+data)  # add data to console tab spaced
+        self.consoleText.append(topic +"    "+data)  # add data to console tab spaced
 
 """ ----------------- Console App Settings ----------------- """
 
