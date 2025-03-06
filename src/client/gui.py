@@ -12,8 +12,6 @@ from client.controller import ControlsAppSettings
 from common.logger import getmylogger
 from common.config import SessionConfig, AppTypeMap, PlotAppCfg, ConsoleAppCfg, ControllerCfg
 
-
-
 class AppSettings(QFrame):
     def __init__(self, config: SessionConfig):
         super().__init__()

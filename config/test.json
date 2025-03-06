@@ -8,12 +8,12 @@
                     "TELEM/TWSB/BALANCE_ANGLE"
                 ],
                 "name": "IMU",
-                "sampleBufferLen": 100,
+                "sampleBufferLen": 1000,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -20.0,
-                        20.0
+                        -6.0,
+                        6.0
                     ]
                 },
                 "maxPlotSeries": 8
@@ -58,12 +58,12 @@
                     "TELEM/TWSB/LIN_VEL_TRGT"
                 ],
                 "name": "LINEAR VELOCITY",
-                "sampleBufferLen": 100,
+                "sampleBufferLen": 1000,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -1.0,
-                        1.0
+                        -0.7,
+                        0.7
                     ]
                 },
                 "maxPlotSeries": 8
@@ -79,8 +79,8 @@
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -3.0,
-                        3.0
+                        -1.0,
+                        1.0
                     ]
                 },
                 "maxPlotSeries": 8

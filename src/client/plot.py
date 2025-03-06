@@ -1,10 +1,9 @@
 from PyQt6 import QtCore
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt, pyqtSlot, QThread, QTimer
+from PyQt6.QtWidgets import QFrame, QTabWidget, QGridLayout, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox, QPushButton, QListWidget, QStackedLayout, QDialog, QDialogButtonBox, QListWidgetItem
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.animation as animation
-plt.style.use('dark_background')
 
 from client.zmqQtBridge import ZmqBridgeQt
 from client.menus import DataSeriesTable, DataSeriesTableSettings, SettingsUI
@@ -13,18 +12,29 @@ from common.logger import getmylogger
 from common.config import LinePlotCfg, ScatterPlotCfg, BarPlotCfg
 from common.config import PlotCfg, PlotAppCfg, PlotTypeMap
 
+from common.zmqutils import ZmqPub, ZmqSub, Endpoint, Transport
+
+import numpy as np
 
 from common.messages import TopicMap
 
+from common.utils import check_darkmode
+
+if(check_darkmode()):
+    plt.style.use('dark_background')
+else:
+    plt.style.use('bmh')
+
+
 """ ----------------- Plot App ----------------- """
 class PlotApp(QFrame):
-    def __init__(self, config: PlotAppCfg, topicMap: TopicMap, ):
+    def __init__(self, config: PlotAppCfg, topicMap):
         super().__init__()
         self.log = getmylogger(__name__)
+        self.setWindowTitle("Plot App")
         self.topicMap = topicMap
         self.config = config
-        self.plots = list() #
-        # Initialize App with config
+        self.plots = list()  # List of plot instances
         self.initUI()
         
         for plotCfg in self.config.plotConfigs:
@@ -33,6 +43,9 @@ class PlotApp(QFrame):
     def closeEvent(self, event):
         for plot in self.plots:
             plot.close()
+        self.log.info("Closing Plot App")
+        event.accept()
+
 
     def initUI(self):
         self.tabs = QTabWidget()
@@ -45,25 +58,24 @@ class PlotApp(QFrame):
 
     def newPlot(self, plotCfg: PlotCfg):
         if plotCfg.plotType == "LINE":
-            plot = LinePlot(topicMap=self.topicMap, config=plotCfg)
-        else :
+            plot = LinePlot(topicMap=self.topicMap, config=plotCfg,
+                            transport=Transport.TCP, endpoint=Endpoint.BOT_MSG)
+        else:
             raise NotImplementedError("Plot Type not implemented")
 
         self.plots.append(plot)      
         self.tabs.addTab(plot, plot.config.name)
 
     def close_plt_handle(self, index):
-        pass #Callback for closing a plot
+        pass  # Callback for closing a plot
 
 class BasePlot(QFrame):
-    
     """Base class for plotting."""
-    def __init__(self, topicMap:TopicMap):
-        """Constructor method for BasePlot class."""
+    def __init__(self, topicMap, transport: Transport, endpoint: Endpoint):
         super().__init__()
         self.config = PlotCfg()
         self.log = getmylogger(__name__)
-        self.zmqBridge = ZmqBridgeQt(topicMap=topicMap) 
+        self.zmqBridge = ZmqBridgeQt(topicMap=topicMap, transport=transport, endpoint=endpoint)
         self.zmqBridge.msgSig.connect(self._updateData)
 
     @QtCore.pyqtSlot(tuple)
@@ -72,14 +84,13 @@ class BasePlot(QFrame):
     
     def close(self):
         self.log.debug(f"Closing Plot {self.config.name}")
-        self.zmqBridge.workerIO._stop()  # stop device thread
+        self.zmqBridge.workerIO._stop()  # Stop the device thread
 
 class LinePlot(BasePlot):
     """Class for line plotting."""
-    def __init__(self, topicMap: TopicMap, config: PlotCfg):
-        """Constructor method for LinePlot class."""
-        super().__init__(topicMap=topicMap)  
-        if(isinstance(config.typeCfg, LinePlotCfg)):
+    def __init__(self, topicMap, config: PlotCfg, transport: Transport, endpoint: Endpoint):
+        super().__init__(topicMap=topicMap, transport=transport, endpoint=endpoint)
+        if isinstance(config.typeCfg, LinePlotCfg):
             self.config = config
 
         self.dataSet = dict()
@@ -87,28 +98,39 @@ class LinePlot(BasePlot):
         self.initUI()
         self.zmqBridge.registerSubscriptions(self.config.protocol)
         self.zmqBridge.workerIO._begin()
+        self.anim = None
         self.setupPlot()
 
     def setupPlot(self):
-        self.xs = list(range(0, self.config.sampleBufferLen)) # time series (x-axis)
-        if(isinstance(self.config.typeCfg, LinePlotCfg)):
-            self.ax.set_ylim(self.config.typeCfg.yrange) 
+        # Set initial x-data based on the configured sample buffer length
+        self.xs = list(range(0, self.config.sampleBufferLen))
+        if isinstance(self.config.typeCfg, LinePlotCfg):
+            self.ax.set_ylim(self.config.typeCfg.yrange)
+
+            # Enable minor ticks and set thinner grid lines
+            self.ax.minorticks_on()
+            self.ax.grid(which='major', linestyle='--', linewidth=0.5)
+            self.ax.grid(which='minor', linestyle=':', linewidth=0.3)
+
             for label in self.config.protocol:
-                self.dataSet[label] = [0] * self.config.sampleBufferLen  # zero out data values array
-                line, = self.ax.plot(self.xs, self.dataSet[label], label=label )  # create a line on the plot
-                self.lines.append(line)
+                if label not in self.dataSet:
+                    # Start with an empty data list
+                    self.dataSet[label] = []
+                    line, = self.ax.plot([], [], label=label, linewidth=0.75)
+                    self.lines.append(line)
             self.ax.legend(loc=1)
-            # matplotlib timer animation
-            self.animation =  animation.FuncAnimation(self.fig, self.animate, fargs=(self.lines,), 
-                                                    interval=200, blit=False, cache_frame_data=False)
+            self.ax.tick_params(axis="both", which="both")
+            self.ax.set_xlabel("Sample")
+            self.anim = self.animation = animation.FuncAnimation(
+                self.fig, self.animate, fargs=(self.lines,),
+                interval=200, blit=False, cache_frame_data=False
+            )
 
     def initUI(self):
-        """Initializes the user interface."""
-        # Create a figure and axis for the plot
+        """Initializes the plot UI."""
         self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(1,1,1)
+        self.ax = self.fig.add_subplot(1, 1, 1)
         self.ax.grid(linestyle='dashed', linewidth=0.5)
-        # Widgets
         self.canvas = FigureCanvas(self.fig)
         layout = QGridLayout()
         layout.addWidget(self.canvas, 0, 0, 5, 5)
@@ -117,27 +139,61 @@ class LinePlot(BasePlot):
       
     @QtCore.pyqtSlot(tuple)
     def _updateData(self, msg: tuple[tuple, str]):
-       # Grabs msg data from the worker thread
         topic, data = msg
         try:
-            self.dataSet[topic].append(float(data))   
+            # Append new data to the list for this topic
+            self.dataSet[topic].append(float(data))
         except Exception as e:
-           self.log.error(f"Exception in UpdateData:{e}")
-           pass
+            self.log.error(f"Exception in UpdateData: {e}")
        
     def animate(self, i, lines):
-        # Update the plot with new data
+        # Update each line with new data while supporting variable-length arrays.
         for line, (key, value) in zip(lines, self.dataSet.items()):
-            line.set_ydata(value[-self.config.sampleBufferLen:])        # Update lines with new Y values
+            # If there are more points than the buffer, show only the last N points;
+            # otherwise, display all points.
+            display_data = value[-self.config.sampleBufferLen:] if len(value) > self.config.sampleBufferLen else value
+            new_x = list(range(len(display_data)))
+            line.set_data(new_x, display_data)
+        self.ax.relim()
+        self.ax.autoscale_view()
         return lines
+    
+    def drawLineOnPlot(self, label: str, data: np.ndarray):
+        """Directly update the plot with a new complete dataset for the given label."""
+        new_data = data.tolist() if isinstance(data, np.ndarray) else data
+        new_x = list(range(len(new_data)))
+        if label in self.dataSet and any(line.get_label() == label for line in self.lines):
+            self.dataSet[label] = new_data
+            for line in self.lines:
+                if line.get_label() == label:
+                    line.set_data(new_x, new_data)
+                    break
+        else:
+            self.dataSet[label] = new_data
+            line, = self.ax.plot(new_x, new_data, label=label)
+            self.lines.append(line)
+            
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.ax.legend(loc=1)
+        self.canvas.draw_idle() # Update the plot with the new data
 
+    def clearData(self, label: str):
+        """Clear the data for the specified label."""
+        if label in self.dataSet:
+            self.dataSet[label] = []
+            for line in self.lines:
+                if line.get_label() == label:
+                    line.set_data([], [])
+                    break
+            self.canvas.draw_idle()
 """ ----------------- Plot App Settings ----------------- """
 class PlotAppSettings(SettingsUI):
-    def __init__(self, config: PlotAppCfg,topicMap: TopicMap):
+    def __init__(self, config: PlotAppCfg, topicMap: TopicMap):
         super().__init__()
         self.setWindowTitle("Plot Settings")
         self.topicMap = topicMap
-        self.config = config # Populate UI with current config
+        self.config = config  # Populate UI with current config
         self.initUI()
         
     def initUI(self):
@@ -145,22 +201,19 @@ class PlotAppSettings(SettingsUI):
         self.plotList = QListWidget()
         # Create a stack layout for the plot configurations
         self.plotConfigStack = QStackedLayout()   
-        if(isinstance(self.config, PlotAppCfg)):   
+        if isinstance(self.config, PlotAppCfg):   
             for idx in range(len(self.config.plotConfigs)):
                 self.createPlotCfg(self.config.plotConfigs[idx]) 
-            # Auto switch plot config based on currently selected plot
             self.plotList.currentRowChanged.connect(self.plotConfigStack.setCurrentIndex)
             self.addPlot_PB = QPushButton("+")
             self.addPlot_PB.clicked.connect(lambda: self.addPlot_handle(PlotCfg()))
             self.removePlot_PB = QPushButton("-")
             self.removePlot_PB.clicked.connect(lambda: self.removePlot_handle(self.plotList.currentRow()))
         
-            # connect the buttons to the method of the current plot configuration
             self.dataSeriesConfig.addSeriesBtn.clicked.connect(
                 lambda:  self.plotConfigStack.currentWidget().table.addSeries(self.dataSeriesConfig.grabSeries()))
             self.dataSeriesConfig.removeSeriesBtn.clicked.connect(
                 lambda:  self.plotConfigStack.currentWidget().table.removeSeries())
-            # Layout
             grid = QGridLayout()
             grid.addWidget(self.addPlot_PB, 0, 0)
             grid.addWidget(self.removePlot_PB, 1, 0)
@@ -180,37 +233,33 @@ class PlotAppSettings(SettingsUI):
         self.plotList.addItem(new_plotSettings.plotName.text())
         self.plotList.setCurrentRow(self.plotList.count()-1)
         listWidget = self.plotList.currentItem()
-        if(isinstance(listWidget, QListWidgetItem)):
+        if isinstance(listWidget, QListWidgetItem):
             new_plotSettings.plotName.textChanged.connect(
                 lambda: listWidget.setText(new_plotSettings.plotName.text()))
             self.plotConfigStack.addWidget(new_plotSettings)
-            self.plotConfigStack.setCurrentIndex(self.plotList.count()-1) # Auto switch to new plot config
+            self.plotConfigStack.setCurrentIndex(self.plotList.count()-1)
 
     def updateConfig(self):
-        # update config with current plot UI configurations
         for i in range(self.plotList.count()):
             stackWidget = self.plotConfigStack.widget(i)
-            if(isinstance(stackWidget, PlotSettings)):
-                stackWidget.updateConfig() # Update Config for each plot settings
-                self.config.plotConfigs[i] = stackWidget.config # Apply to app config
+            if isinstance(stackWidget, PlotSettings):
+                stackWidget.updateConfig()
+                self.config.plotConfigs[i] = stackWidget.config
 
     def addPlot_handle(self, plotCfg: PlotCfg):
-       # Add a new plot configuration to the stacked layout
         self.config.plotConfigs.append(plotCfg)
         self.createPlotCfg(plotCfg)
         
     def removePlot_handle(self, index):
-        # Remove the selected plot configuration from the stacked layout
         self.plotConfigStack.removeWidget(self.plotConfigStack.widget(index))
         self.config.plotConfigs.pop(index)
         self.plotList.takeItem(index)
 
     def load_handle(self, fp):
-        # Clear the current plot configurations
         for idx in range(self.plotList.count()):
             self.removePlot_handle(idx)
-        self.config.load(fp) # Load config from file
-        for idx in range(len(self.config.plotConfigs)): # Add the new plot configurations
+        self.config.load(fp)
+        for idx in range(len(self.config.plotConfigs)):
             self.addPlot_handle(self.config.plotConfigs[idx])
 
 class PlotSettings(SettingsUI):
@@ -224,13 +273,12 @@ class PlotSettings(SettingsUI):
         self.plotName = QLineEdit(self.config.name)
         self.plotType = QComboBox()
         self.plotType.addItems(PlotTypeMap.keys())
-        if(self.config.plotType in PlotTypeMap.keys()):
+        if self.config.plotType in PlotTypeMap.keys():
             self.plotType.setCurrentText(self.config.plotType)
         self.maxSeries = QLineEdit(str(self.config.maxPlotSeries))
         self.maxSeries.setMaximumWidth(50)
         self.sampleBuffer = QLineEdit(str(self.config.sampleBufferLen))
         self.sampleBuffer.setMaximumWidth(50)
-        # Config depending on plot type with default values
         self.linePlotSettings = LinePlotSettings(LinePlotCfg())
         self.scatterPlotSettings = ScatterPlotSettings(ScatterPlotCfg())
         self.barPlotSettings = BarPlotSettings(BarPlotCfg())        
@@ -238,11 +286,9 @@ class PlotSettings(SettingsUI):
         self.plotCfgStack.addWidget(self.linePlotSettings)
         self.plotCfgStack.addWidget(self.scatterPlotSettings)
         self.plotCfgStack.addWidget(self.barPlotSettings)
-        # Auto switch plot config based on currently selected plot type
         self.plotType.currentIndexChanged.connect(self.plotCfgStack.setCurrentIndex)
-        # Data Series Table
-        self.table = DataSeriesTable(self.config.protocol)
-        # Layout
+        self.table = DataSeriesTable()
+        self.table.loadSubscriptions(self.config.protocol)
         grid = QGridLayout()
         grid.addWidget(QLabel("Plot Name"), 0, 0)
         grid.addWidget(self.plotName, 0, 1)
@@ -260,19 +306,15 @@ class PlotSettings(SettingsUI):
         self.setLayout(hBox)
 
     def updateConfig(self):
-        # Update the config with the current settings
         self.config.name = self.plotName.text()
         self.config.plotType = self.plotType.currentText()
         self.config.maxPlotSeries = int(self.maxSeries.text())
         self.config.sampleBufferLen = int(self.sampleBuffer.text())
-        self.config.protocol = self.table.grabProtocol()
-        # Kinda Hacky; inheritance -> unnecessary complexity
+        self.config.protocol = self.table.grabSubscriptions()
         stackWidget = self.plotCfgStack.currentWidget()
-        if(isinstance(stackWidget, LinePlotSettings)):
+        if isinstance(stackWidget, LinePlotSettings):
             stackWidget.updateConfig()
             self.config.typeCfg = stackWidget.config
-
-     
 
 class LinePlotSettings(SettingsUI):
     def __init__(self, config: LinePlotCfg):
@@ -350,23 +392,17 @@ class BarPlotSettings(SettingsUI):
         self.config.barWidth = float(self.barWidth.text())
 
 class PlotAppSettingsDialog(QDialog):
-    # Dialog for configuring plot settings Only used in Standalone mode
     def __init__(self, config: PlotAppCfg, topicMap: TopicMap):
         super().__init__()
         self.setWindowTitle("Plot Settings")
-        self.settingsUI = PlotAppSettings(config,topicMap) #UI
+        self.settingsUI = PlotAppSettings(config, topicMap)
         self.initUI()
 
     def initUI(self):
-        # Dialog buttons on accept update the config with the current settings
-        QBtn = (
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
-        )
+        QBtn = (QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.handleAccepted) 
         self.buttonBox.rejected.connect(self.reject)
-
         layout = QVBoxLayout()
         layout.addWidget(self.settingsUI)
         layout.addWidget(self.buttonBox)

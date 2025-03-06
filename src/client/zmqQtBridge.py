@@ -10,16 +10,15 @@ from common.messages import ParameterMap, TopicMap, Topic
 
 class ZmqBridgeQt(QObject):
     msgSig = pyqtSignal(tuple)
-    def __init__(self, topicMap: TopicMap):
+    def __init__(self, topicMap: TopicMap, transport: Transport, endpoint: Endpoint):
         super().__init__()
         self.log = getmylogger(__name__)
         self.topicMap = topicMap
         self.workerIO = Worker(self._run)
         self.subscriptions = None
-        self.subscriber = ZmqSub(Transport.TCP, Endpoint.BOT_MSG)
+        self.subscriber = ZmqSub(transport=transport, endpoint=endpoint)
       
     def _run(self):
-        self.log.info(f"Started ZmqBridge I/O Thread")
        
         if(self.subscriptions == None):
             self.log.error("No subscriptions")
@@ -34,14 +33,13 @@ class ZmqBridgeQt(QObject):
                 if(isinstance(topic, Topic)):
                     if(topic.nArgs > 2): # HACK makes data-points shallow vs deep
                         msgArgsVal = msg.split(topic.delim)
-                        msgSubTopics  = [f"{topicname}/{argname}" for argname in topic.args[:-1]]# timestamp is discarded 
+                        msgSubTopics  = [f"{topicname}/{argname}" for argname in topic.args[:-1]]# HACK ommit timestamp from arg names
                         if len(msgArgsVal) == len(msgSubTopics) :  # check all data is present
                             for i, topicstr in enumerate(msgSubTopics):
                                 if(topicstr in self.subscriptions):
                                     self.msgSig.emit((topicstr, msgArgsVal[i]))                                
                     else:
                         self.msgSig.emit((topicname, msg)) 
-                        print(f"ZmqBridgeQt: {topicname} {msg}")
             except Exception as e:
                 self.log.error(f"Exception in ZmqBridgeQt {e}")
                 break
@@ -52,7 +50,7 @@ class ZmqBridgeQt(QObject):
     def registerSubscriptions(self, subscriptions: tuple[str, ...]):
         self.subscriptions = subscriptions
         for topicname in subscriptions:
-            if("TELEM/TWSB" in topicname): 
+            if("TELEM/TWSB" in topicname):  # HACK
                 topicname = "TELEM/TWSB"
             
             topic = self.topicMap.get_topic_by_name(topicname)

@@ -1,6 +1,6 @@
 from PyQt6 import QtCore
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtWidgets import QFrame, QTabWidget, QPushButton, QGridLayout, QWidget, QTextEdit, QVBoxLayout, QListWidget, QStackedLayout, QHBoxLayout, QListWidgetItem, QLabel, QLineEdit
 
 from client.zmqQtBridge import ZmqBridgeQt
 from client.menus import DataSeriesTableSettings, DataSeriesTable, SettingsUI
@@ -8,6 +8,9 @@ from client.menus import DataSeriesTableSettings, DataSeriesTable, SettingsUI
 from common.logger import getmylogger
 from common.messages import TopicMap
 from common.config import ConsoleAppCfg, ConsoleCfg
+from common.zmqutils import Transport, Endpoint
+
+from common.utils import check_darkmode
 
 """ ----------------- Console App ----------------- """
 class ConsoleApp(QFrame):
@@ -68,13 +71,13 @@ class Console(QWidget):
         self.topics = subscritions
 
         self.initUI()
-        self.zmqBridge = ZmqBridgeQt(topicMap=self.topicMap)
+        self.zmqBridge = ZmqBridgeQt(topicMap=self.topicMap, transport=Transport.TCP, endpoint=Endpoint.BOT_MSG)
         self.zmqBridge.registerSubscriptions(self.topics)
         self.zmqBridge.msgSig.connect(self._updateData)
         self.zmqBridge.workerIO._begin()
                
     def closeEvent(self, event):
-        self.log.debug(f"Closing Console {self.name}")
+        self.log.info(f"Closing Console {self.name}")
         self.zmqBridge.workerIO._stop()  # stop device thread
         event.accept()
 
@@ -84,7 +87,10 @@ class Console(QWidget):
         self.consoleText.setReadOnly(True)
         self.consoleText.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.consoleText.setAcceptRichText(True)
-        self.consoleText.setStyleSheet("background-color: black; color: green;")
+        if(check_darkmode()):
+            self.consoleText.setStyleSheet("background-color: black; color: green;")
+        else:
+            self.consoleText.setStyleSheet("background-color: white; color: black;")
         
         self.vBox = QVBoxLayout()
         self.vBox.setContentsMargins(0, 0, 0, 0)
@@ -128,9 +134,9 @@ class ConsoleAppSettings(SettingsUI):
             self.removeConsole_PB = QPushButton("-")
             self.removeConsole_PB.clicked.connect(self.removeConsole_handle)     
             self.dataSeriesConfig.addSeriesBtn.clicked.connect(
-                lambda: self.consoleConfigStack.currentWidget().table.addSeries(self.dataSeriesConfig.grabSeries()))
+                lambda: self.consoleConfigStack.currentWidget().table.addSeries(self.dataSeriesConfig.grabSeries()) if isinstance(self.consoleConfigStack.currentWidget(), ConsoleSettings) else None)
             self.dataSeriesConfig.removeSeriesBtn.clicked.connect(
-                lambda: self.consoleConfigStack.currentWidget().table.removeSeries())
+                lambda: self.consoleConfigStack.currentWidget().table.removeSeries() if isinstance(self.consoleConfigStack.currentWidget(), ConsoleSettings) else None)
             grid = QGridLayout()
             grid.addWidget(self.consoleList, 0, 0, 1, 2)
             grid.addWidget(self.addConsole_PB, 1, 0)
@@ -188,7 +194,8 @@ class ConsoleSettings(SettingsUI):
     def initUI(self):
         self.consoleName = QLineEdit(self.config.name)
         self.sampleBuffer = QLineEdit(str(self.config.sampleBufferLen))
-        self.table = DataSeriesTable(self.config.protocol)
+        self.table = DataSeriesTable()
+        self.table.loadSubscriptions(self.config.protocol)
 
         grid = QGridLayout()
         grid.addWidget(QLabel("Console Name:"), 0, 0)
@@ -202,7 +209,7 @@ class ConsoleSettings(SettingsUI):
     def updateConfig(self):
         self.config.name = self.consoleName.text()
         self.config.sampleBufferLen = int(self.sampleBuffer.text())
-        self.config.protocol = self.table.grabProtocol()
+        self.config.protocol = self.table.grabSubscriptions()
 
         
 

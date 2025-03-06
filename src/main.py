@@ -1,6 +1,6 @@
-from PyQt6.QtCore import *
+from PyQt6.QtCore import QTimer, QThread, pyqtSignal, pyqtSlot, QEventLoop
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenuBar, QMenu
 from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QAction
 
 import sys, os
@@ -10,6 +10,7 @@ import json
 from common.logger import getmylogger
 from common.messages import TopicMap, ParameterMap
 from common.config import SessionConfig, PlotAppCfg, PlotCfg, AppTypeMap, ConsoleAppCfg, ControllerCfg
+from common.zmqutils import Transport, Endpoint
 
 from core.commander import ZMQCommander
 
@@ -20,6 +21,8 @@ from client.gui import AppSettingsDialog, SessionConfig, AppSettings
 from client.plot import PlotAppCfg, PlotAppSettings, PlotApp, PlotCfg
 from client.joystick import JoystickApp
 from client.paramTable import ParamTableApp
+from client.sigGen import SigGenApp
+from recorder import RecorderApp
 
 
 
@@ -61,6 +64,12 @@ class App(QMainWindow):
         self.paramTableApp = ParamTableApp(self.zmqCommander)
         self.appWindows.append(self.paramTableApp)
         self.paramTableApp.show()
+        self.sigGenApp = SigGenApp()
+        self.appWindows.append(self.sigGenApp)
+        self.sigGenApp.show()
+        self.recorderApp = RecorderApp(transport=Transport.TCP, endpoint=Endpoint.BOT_MSG)
+        self.appWindows.append(self.recorderApp)
+        self.recorderApp.show()
 
         self.setCentralWidget(self.paramTableApp)
 
@@ -70,25 +79,31 @@ class App(QMainWindow):
         self.fileMenu = self.menu_bar.addMenu("File")
         settings_action = QAction("Settings", self)
         settings_action.triggered.connect(self.settings)
-        self.fileMenu.addAction(settings_action)
+        if(isinstance(self.fileMenu, QMenu)):
+            self.fileMenu.addAction(settings_action)
         
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
-        self.fileMenu.addAction(exit_action)
+        if(isinstance(self.fileMenu, QMenu)):
+            self.fileMenu.addAction(exit_action)
 
         self.appMenu = self.menu_bar.addMenu("Apps")
-        self.plotMenu = self.appMenu.addMenu("Plot")
+        if(isinstance(self.appMenu, QMenu)):
+            self.plotMenu = self.appMenu.addMenu("Plot")
         new_plot_action = QAction("New", self)
         new_plot_action.triggered.connect(self.newPlot)
-        self.plotMenu.addAction(new_plot_action)
+        if(isinstance(self.plotMenu, QMenu)):
+            self.plotMenu.addAction(new_plot_action)
 
-        self.consoleMenu = self.appMenu.addMenu("Console")
+        if(isinstance(self.appMenu, QMenu)):
+            self.consoleMenu = self.appMenu.addMenu("Console")
         new_console_action = QAction("New", self)
         new_console_action.triggered.connect(self.newConsole)
         clear_all_action = QAction("Clear All", self)
         clear_all_action.triggered.connect(self.clearAll)
-        self.consoleMenu.addAction(clear_all_action)
-        self.consoleMenu.addAction(new_console_action)
+        if(isinstance(self.consoleMenu, QMenu)):
+            self.consoleMenu.addAction(clear_all_action)
+            self.consoleMenu.addAction(new_console_action)
 
         self.setMenuBar(self.menu_bar)
 
@@ -105,7 +120,6 @@ class App(QMainWindow):
         self.log.debug("Clearing All Consoles")
 
     def closeEvent(self, event):
-        self.log.info("Closing App")
         event.accept()
 
 

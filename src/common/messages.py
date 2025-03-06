@@ -21,8 +21,6 @@ EOF  -- End of Frame == '\n'
     
 '''
 
-
-
 @dataclass
 class MsgFrame():
     ID: str = ""
@@ -54,7 +52,7 @@ class ParameterMap:
                 # Ensure the dictionaries for this node exist.
                 if node_name not in self.nodes:
                     self.nodes[node_name] = {}
-                if node_name not in self.parameter_id_map: # note this overwerites duplciates
+                if node_name not in self.parameter_id_map: # note this overwrites duplicates
                     self.parameter_id_map[node_name] = {}
                     
                 for parameter in node_data.get('parameters', []):
@@ -139,8 +137,6 @@ class TopicMap:
 
                     self.topics[topic.ID] = topic
                     self.names_to_ids[topic.name] = topic.ID
-
-        self.print_topics()
 
     def get_topic_by_name(self, name: str) -> Optional[Topic]:
         """Get topic by name."""

@@ -51,7 +51,7 @@ class PlotAppCfg():
         self.plotConfigs = list() # Reset plotConfigs list
         for cfg in cfg_data["plotConfigs"]:
             if(cfg.get("plotName") in [cfg.name for cfg in self.plotConfigs]):
-                continue # Skip duplicate plot names
+                continue # Skip duplicate plot names if any
             cfg["typeCfg"] = PlotTypeMap[cfg["plotType"]](**cfg["typeCfg"])
             self.plotConfigs.append(PlotCfg(**cfg)) # unpack dict to PlotCfg
         self.maxPlots = cfg_data["maxPlots"]
@@ -76,7 +76,6 @@ class ConsoleAppCfg():
         for consoleCfg in cfg_data["consoleCfgs"]:
             if(consoleCfg.get("name") in [cfg.name for cfg in self.consoleCfgs]):
                 continue
-            print(consoleCfg)
             self.consoleCfgs.append(ConsoleCfg(**consoleCfg)) # unpack dict to ConsoleCfg
         self.maxNumConsoles = cfg_data["maxNumConsoles"]
 """ ----------------- Controls App Config ----------------- """
@@ -122,8 +121,8 @@ class SessionConfig(): # Session Runtime Configuration
                 "consoleApp": self.consoleAppCfg,
                 "controlsApp": self.controllerAppCfg
             }
-            # Use custom encoder to serialize dataclasses properly
-            json.dump(sessionCfg_data, f, indent=4, default=lambda obj: obj.__dict__)
+            # Use custom encoder to serialize dataclasses
+            json.dump(sessionCfg_data, f, indent=4, default=lambda obj: obj.__dict__) 
 
     def populate(self, cfg_data: dict):
         self.plotAppCfg.populate(cfg_data["plotApp"])

@@ -11,10 +11,15 @@ from common.messages import TopicMap, ParameterMap
 from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtCore import QTimer, pyqtSignal
 
+from typing import List
+
+from common.logger import getmylogger
+
+
+
 class ProgressBar(QProgressBar):
     """ Custom progress bar with a configurable timeout. """
     timeoutSig = pyqtSignal()  
-
     def __init__(self, timeout: int = 500):  
         """
         :param timeout: Total duration in milliseconds for the progress bar to complete.
@@ -45,10 +50,6 @@ class ProgressBar(QProgressBar):
             self.timeoutSig.emit()  # Emit signal when done
             self.setValue(0)  # Reset for future use
 
-
-    
-
-
 class SettingsUI(QFrame):
     def __init__(self):
         super().__init__()
@@ -74,7 +75,7 @@ class FileExplorer(QWidget):
     def browse(self):
         fileDialog = QFileDialog()
         fileDialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        fileDialog.setNameFilter("Config Files (*.json)")
+        fileDialog.setNameFilter("Config Files (*.*)")
         if fileDialog.exec():
             fileNames = fileDialog.selectedFiles()
             self.fileEntry.setText(fileNames[0])
@@ -111,11 +112,11 @@ class DataSeriesTableSettings(QFrame):
         return (self.topicCB.currentText(), self.argCb.currentText())
 
 class DataSeriesTable(QFrame):
-    def __init__(self, protocol: tuple[str, ...]):
+    def __init__(self):
         super().__init__()
+        self.log = getmylogger(__name__)
         self.initUI()
-        self.loadProtocol(protocol) # Load protocol into the table
-
+    
     def initUI(self):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
@@ -124,24 +125,28 @@ class DataSeriesTable(QFrame):
         layout.addWidget(self.table)
         self.setLayout(layout)
 
-    def grabProtocol(self) -> tuple[str, ...]:
+    def grabSubscriptions(self) -> tuple[str, str]:
         # Grab protocol from Table, return as a tuple of rows
         # separate collums with a "/"
-        protocol = tuple()
-        for row in range(self.table.rowCount()):
-            topic = self.table.item(row, 0).text()
-            arg = self.table.item(row, 1).text()
-            protocol += (topic + "/" + arg,)  
-        return protocol
+        subscriptions = tuple()
+        try:
+            for row in range(self.table.rowCount()):
+                topic = self.table.item(row, 0).text()
+                arg = self.table.item(row, 1).text()
+                subscriptions += (f"{topic}/{arg}",)
+                
+        except Exception as e:
+            self.log.error(f"Error in grabSubscriptions {e}")
+        return subscriptions
     
-    def loadProtocol(self, protocol: tuple[str, ...]):
+    def loadSubscriptions(self, subscriptions: tuple[str, ...]):
         # Load protocol into the table
-        for row, series in enumerate(protocol):
+        for row, series in enumerate(subscriptions):
             topic, arg = series.split("/")
             self.table.setItem(row, 0, QTableWidgetItem(topic))
             self.table.setItem(row, 1, QTableWidgetItem(arg))
     
-    def addSeries(self, series: tuple[str, str]):
+    def addDataSeries(self, series: tuple[str, str]):
         # Add selected data series to the table
         topicName, argName = series
         rowPosition = self.table.rowCount()
@@ -149,8 +154,16 @@ class DataSeriesTable(QFrame):
         self.table.setItem(rowPosition, 0, QTableWidgetItem(topicName))
         self.table.setItem(rowPosition, 1, QTableWidgetItem(argName))
 
-    def removeSeries(self):
+    def removeDataSeries(self):
         row = self.table.currentRow()
         self.table.removeRow(row)
+
+    def validate(self) -> bool:
+        # check if the table is empty 
+        if self.table.rowCount() == 0:
+            return False
+        return True
+        
+
 
 

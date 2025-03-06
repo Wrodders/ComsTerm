@@ -9,12 +9,14 @@ from common.messages import ParameterMap
 from core.commander import ZMQCommander
 from core.ps4Joy import ps4_joystick_handler
 
+from common.logger import getmylogger
+
 class JoystickApp(QFrame):
     joystickDataChanged = QtCore.pyqtSignal(str, str, float)  # nodeName, paramName, value
     def __init__(self, cmdr: ZMQCommander):
         super().__init__()
         self.cmdr = cmdr
-
+        self.log = getmylogger(__name__)
         self.initUI()
         self.ps4_process = None
         self.ps4_pipe_parent = None
@@ -27,7 +29,6 @@ class JoystickApp(QFrame):
         self.cmdr.sendSetCmd(nodeName, paramName, str(value))
 
     def initUI(self):
-        print("Init Joystick App")
         grid = QGridLayout()
         self.setContentsMargins(0,0,0,0)
         self.joyBtn = JoystickButton()
@@ -88,6 +89,7 @@ class JoystickApp(QFrame):
 
     def closeEvent(self, event):
         self.stopPs4Process()
+        self.log.info("Closing Joystick App")
         event.accept()
 
     def updateParamCombo(self, nodeId):

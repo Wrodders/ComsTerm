@@ -25,6 +25,7 @@ class Endpoint(Enum):
     DBOT_CMD = "dbot.local:5556"
     LOCAL_MSG = "localhost:5555"
     LOCAL_CMD = "localhost:5556"
+    SIG = "siggen"
 
 def buildAddress(transport: Transport, endpoint: Endpoint) -> str:
     return f"{transport.value}{endpoint.value}"
@@ -38,18 +39,18 @@ class ZmqPub():
 
     def bind(self):
         self.socket.bind(self.socketAddress)
-        self.log.debug(f"Bound ZMQ PUB socket to {self.socketAddress}")
 
     def connect(self):
         self.socket.connect(self.socketAddress)
-        self.log.debug(f"Connected ZMQ PUB socket to {self.socketAddress}")
 
     def send(self, topic: str, data: str):
         self.socket.send_multipart([topic.encode(), data.encode()])
 
+    def sendTimestamped(self, topic: str, data: str, timestamp: str):
+        self.socket.send_multipart([topic.encode(), data.encode(), timestamp.encode()])
+
     def close(self):
         self.socket.close()
-        self.log.debug(f"Closed ZMQ PUB socket bound to: {self.socketAddress}")
 
 class ZmqSub():
     def __init__(self, transport: Transport, endpoint: Endpoint):
@@ -60,11 +61,9 @@ class ZmqSub():
 
     def connect(self):
         self.socket.connect(self.socketAddress)
-        self.log.debug(f"Connected ZMQ SUB socket to: {self.socketAddress}")
 
     def addTopicSub(self, topic: str):
         self.socket.setsockopt(zmq.SUBSCRIBE, topic.encode())
-        self.log.debug(f"Subscribed to topic: {topic}")
 
     def receive(self) -> tuple[str, str, str]:
         try:
@@ -78,7 +77,6 @@ class ZmqSub():
 
     def close(self):
         self.socket.close()
-        self.log.debug(f"Closed ZMQ SUB socket connected to: {self.socketAddress}")
 
 def main():
     parser = argparse.ArgumentParser(description="ZMQ Publisher/Subscriber CLI")

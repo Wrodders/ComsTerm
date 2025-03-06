@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import *
+from PyQt6.QtWidgets import QFrame, QTabWidget, QVBoxLayout, QScrollArea, QWidget, QLabel, QPushButton, QStackedWidget, QLineEdit, QHBoxLayout
+from PyQt6.QtCore import pyqtSignal
 
 
 from functools import partial
@@ -24,7 +24,10 @@ class ParamTableApp(QFrame):
        
         for node_name, node_params in cmdr.paramRegMap.getAllParameters().items():
            
-            paramTable = ParamTable(paramNames=list(node_params.keys()), description=node_params.get('description', ""))
+            description = node_params.get('description', "")
+            if not isinstance(description, str):
+                description = str(description)
+            paramTable = ParamTable(paramNames=list(node_params.keys()), description=description)
             self.tabs.addTab(paramTable, node_name)
             self.nodeTabs.append(paramTable)
             # Connect App Signals to Commander
@@ -44,6 +47,7 @@ class ParamTableApp(QFrame):
         self.setLayout(vbox)
         
     def closeEvent(self, event):
+        self.log.info("Closing ParamTable")
         event.accept() 
 
 class ParamTable(QWidget):

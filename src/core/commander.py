@@ -18,7 +18,6 @@ class ZMQCommander():
             # SOF | TYPE | ID | DATA(0)| EOF
             packet = ("<" + "A" + paramId).encode() + b'\n' 
             self.publisher.socket.send_multipart([nodeID.encode(), packet])
-            self.log.debug(F"{nodeID} {packet}")
             return True
         else:
             return False
@@ -30,7 +29,6 @@ class ZMQCommander():
             # SOF | ID | TYPE | DATA(0)| EOF
             packet = ("<" + "B" + str(paramId) + str(value)).encode() + b'\n'
             self.publisher.socket.send_multipart([nodeID.encode(), packet])
-            self.log.debug(F"{nodeID} {packet}")
             return True
         else:
             return False
