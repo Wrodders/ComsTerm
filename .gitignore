@@ -3,3 +3,6 @@
 __pycache__
 site/*
 *.log
+*.mp4
+*.csv
+

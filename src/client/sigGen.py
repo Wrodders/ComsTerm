@@ -373,7 +373,7 @@ class SigGenApp(QWidget):
             except ValueError as e:
                 QMessageBox.critical(self, "Input Error", f"Invalid input: {e}")
                 return None
-            if self.plotConfig.sampleBufferLen > 1024*5:
+            if self.plotConfig.sampleBufferLen > 1024*1024:
                 QMessageBox.critical(self, "Buffer Size Error", "Buffer size too large (>)")
                 return None
             return config
