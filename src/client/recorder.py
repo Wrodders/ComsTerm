@@ -145,6 +145,7 @@ class RecorderApp(QWidget):
     def initUI(self):
         self.vbox = QVBoxLayout()
         self.fileMenu = FileExplorer("Select File")
+
         
         self.dataSeriesTable = DataSeriesTable()
         self.dataSeriesTable.setMaximumSize(300, 100)

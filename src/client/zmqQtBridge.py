@@ -48,6 +48,7 @@ class ZmqBridgeQt(QObject):
         self.log.info("Exiting ZmqBridge I/O Thread")
 
     def registerSubscriptions(self, subscriptions: tuple[str, ...]):
+        # WTAH have i gotten myself into????? Theres no API I AM the API, no MORE JSON PLS PLS PLS 
         self.subscriptions = subscriptions
         for topicname in subscriptions:
             if("TELEM/TWSB" in topicname):  # HACK

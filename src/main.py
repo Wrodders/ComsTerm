@@ -22,7 +22,7 @@ from client.plot import PlotAppCfg, PlotAppSettings, PlotApp, PlotCfg
 from client.joystick import JoystickApp
 from client.paramTable import ParamTableApp
 from client.sigGen import SigGenApp
-from recorder import RecorderApp
+from client.recorder import RecorderApp
 
 
 

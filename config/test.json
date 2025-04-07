@@ -55,15 +55,16 @@
             {
                 "protocol": [
                     "TELEM/TWSB/LINEAR_VEL",
-                    "TELEM/TWSB/LIN_VEL_TRGT"
+                    "TELEM/TWSB/LIN_VEL_TRGT",
+                    "TELEM/TWSB/XPOS"
                 ],
                 "name": "LINEAR VELOCITY",
                 "sampleBufferLen": 1000,
                 "plotType": "LINE",
                 "typeCfg": {
                     "yrange": [
-                        -0.7,
-                        0.7
+                        -0.6,
+                        1.8
                     ]
                 },
                 "maxPlotSeries": 8

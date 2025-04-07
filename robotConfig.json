@@ -1,15 +1,15 @@
 {
     "VISION": {
         "parameters": [
-            {"name": "HORIZON_HEIGHT_PX", "id": 0, "access": "W", "format": "%d", "description": "ROI Horizon height [px]"},
-            {"name": "TRANSFORM_PAD_PX",  "id": 1, "access": "W", "format": "%d", "description": "Center Bottom Padding [px]"},
-            {"name": "EDGE_FILT",         "id": 2, "access": "W", "format": "%d", "description": "Edge Filter Algorithm"},
-            {"name": "OUT_MODE",          "id": 3, "access": "W", "format": "%d", "description": "Output Mode"},
-            {"name": "N_WINDOWS",         "id": 4, "access": "W", "format": "%d", "description": "Number of Sliding Windows"},
-            {"name": "WIN_MARGIN_PX",     "id": 5, "access": "W", "format": "%d", "description": "Window Margin [px]"},
-            {"name": "WIN_MIN_PX",        "id": 6, "access": "W", "format": "%d", "description": "Window Threshold level"}
+            {"name": "PROG_MODE",         "id": 0, "access": "W", "format": "%d", "description": "Program Mode"},
+            {"name": "HORIZON_HEIGHT_PX", "id": 1, "access": "W", "format": "%d", "description": "ROI Horizon height [px]"},
+            {"name": "MAX_VEL",           "id": 2, "access": "W", "format": "%d", "description": "Max Target Linear Velocity"},
+            {"name": "NAV_EN",            "id": 3, "access": "W", "format": "%d", "description": "Enable Navigation"},
+            {"name": "KP",                "id": 4, "access":"W",  "format": "%f", "description": "Steering Kp"},
+            {"name": "KI",                "id": 5, "access":"W",  "format": "%f", "description": "Steering Ki"},
+            {"name": "KD",                "id": 6, "access":"W",  "format": "%f", "description": "Steering Kd"},
+            {"name": "LOOKAHEAD",         "id": 7, "access":"W",  "format": "%f", "description": "Look Ahead Distance"}
             ],
-
         "publishers": [
             {"name": "CMD_RET",         "id": 0, "description": "Return Cmd Value","format": "%s:%d", "args": "retval, timestamp"},
             {"name": "ERROR",           "id": 1, "description": "Error Message", "format": "%s:%d", "args": "msg, timestamp"},
@@ -62,7 +62,7 @@
             {"name": "INFO",            "id":2,  "description": "Info Log",                        "format": "%s:%d", "args": "msg, timestamp"},
             {"name": "DEBUG",           "id":3,  "description": "Debug Log",                       "format": "%s:%d", "args": "msg, timestamp"},
             {"name": "TELEM",            "id":4,  "description": "Telemetry Data",                  
-            "format": "0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%d", 
+            "format": "0.3f:%0.3f:%0.3f:0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%0.3f:%d", 
                 "args":  ["PITCH",    "ROLL",
                           "ACCEL_X", "ACCEL_Y",  "ACCEL_Z",
                           "GYRO_X",  "GYRO_Y",   "GYRO_Z",
@@ -70,8 +70,8 @@
                           "RIGHT_SHAFT_RPS", "RIGHT_WHEEL_TRGT", "RIGHT_VOLTAGE", 
                           "LINEAR_VEL",      "LIN_VEL_TRGT",     "BALANCE_ANGLE",
                           "ANGULAR_VEL",     "ANG_VEL_TRGT",     "STEER_DIFF",
-                           "XPOS", "LQR_U",
-                     "timestamp"]
+                          "XPOS", "XG", "YG", "PSIG" , "LQR_U",
+                         "timestamp"]
             }
 
         ]
