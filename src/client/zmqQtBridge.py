@@ -53,7 +53,6 @@ class ZmqBridgeQt(QObject):
         for topicname in subscriptions:
             if("TELEM/TWSB" in topicname):  # HACK
                 topicname = "TELEM/TWSB"
-            
             topic = self.topicMap.get_topic_by_name(topicname)
             if(isinstance(topic, Topic)):  
                 self.subscriber.addTopicSub(topicname)
